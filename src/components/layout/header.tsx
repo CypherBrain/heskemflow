@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Bell, Search, Plus } from "lucide-react"
-import { UserButton } from "@clerk/nextjs"
+import { Bell, Search, Plus, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MobileNav } from "@/components/layout/mobile-nav"
@@ -36,13 +35,9 @@ export function Header() {
           </span>
         </Button>
 
-        <UserButton
-          appearance={{
-            elements: {
-              avatarBox: "size-8 rounded-lg",
-            },
-          }}
-        />
+        <div className="flex items-center justify-center size-8 rounded-lg bg-[#2563EB] text-white">
+          <User className="size-4" />
+        </div>
       </div>
     </header>
   )

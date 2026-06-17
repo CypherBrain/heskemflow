@@ -1,4 +1,3 @@
-import { auth, currentUser } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/prisma"
 import type { UserRole } from "@prisma/client"
 
@@ -10,15 +9,16 @@ export interface AuthUser {
   email: string
 }
 
+const DEMO_USER = {
+  clerkUserId: "demo_clerk_user",
+  fullName: "מנהל מערכת",
+  email: "admin@heskemflow.co.il",
+  role: "ADMIN" as const,
+}
+
 export async function getCurrentUser(): Promise<AuthUser> {
-  const { userId: clerkUserId } = await auth()
-
-  if (!clerkUserId) {
-    throw new Error("Unauthorized")
-  }
-
-  const existing = await prisma.user.findUnique({
-    where: { clerkUserId },
+  const existing = await prisma.user.findFirst({
+    where: { clerkUserId: DEMO_USER.clerkUserId },
     select: {
       id: true,
       organizationId: true,
@@ -38,19 +38,9 @@ export async function getCurrentUser(): Promise<AuthUser> {
     }
   }
 
-  const clerkUser = await currentUser()
-  if (!clerkUser) throw new Error("Unauthorized")
-
-  const fullName =
-    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") ||
-    clerkUser.emailAddresses[0]?.emailAddress ||
-    "User"
-  const email =
-    clerkUser.emailAddresses[0]?.emailAddress ?? "unknown@example.com"
-
   const org = await prisma.organization.create({
     data: {
-      name: `${fullName} - ארגון`,
+      name: `${DEMO_USER.fullName} - ארגון`,
       country: "Israel",
       defaultLanguage: "he",
     },
@@ -58,11 +48,11 @@ export async function getCurrentUser(): Promise<AuthUser> {
 
   const user = await prisma.user.create({
     data: {
-      clerkUserId,
+      clerkUserId: DEMO_USER.clerkUserId,
       organizationId: org.id,
-      fullName,
-      email,
-      role: "ADMIN",
+      fullName: DEMO_USER.fullName,
+      email: DEMO_USER.email,
+      role: DEMO_USER.role,
     },
   })
 

@@ -1,6 +1,4 @@
 import type { Metadata } from "next"
-import { ClerkProvider } from "@clerk/nextjs"
-import { heIL } from "@clerk/localizations"
 import { Heebo, Assistant } from "next/font/google"
 import "./globals.css"
 
@@ -36,9 +34,7 @@ export default function RootLayout({
       className={`${heebo.variable} ${assistant.variable} h-full`}
     >
       <body className="min-h-full flex flex-col font-sans antialiased">
-        <ClerkProvider localization={heIL}>
-          {children}
-        </ClerkProvider>
+        {children}
       </body>
     </html>
   )
