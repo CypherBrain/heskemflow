@@ -1,0 +1,394 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Organization {
+  id                 String   @id @default(cuid())
+  name               String
+  registrationNumber String?
+  country            String   @default("Israel")
+  defaultLanguage    String   @default("he")
+  createdAt          DateTime @default(now())
+
+  users           User[]
+  companies       Company[]
+  contacts        Contact[]
+  deals           Deal[]
+  contracts       Contract[]
+  templates       ContractTemplate[]
+  clauses         Clause[]
+  industryPacks   IndustryPack[]
+  crmIntegrations CrmIntegration[]
+  auditLogs       AuditLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String       @id @default(cuid())
+  clerkUserId    String       @unique
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  fullName       String
+  email          String
+  role           UserRole     @default(VIEWER)
+  createdAt      DateTime     @default(now())
+
+  ownedContracts Contract[]           @relation("ContractOwner")
+  versions       ContractVersion[]
+  approvalsSent  ApprovalRequest[]    @relation("ApprovalRequester")
+  approvalsToMe  ApprovalRequest[]    @relation("ApprovalApprover")
+  obligations    ContractObligation[]
+  comments       Comment[]
+  attachments    Attachment[]
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  LEGAL
+  SALES
+  VIEWER
+}
+
+model Company {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id])
+  name               String
+  registrationNumber String?
+  address            String?
+  industry           String?
+  createdAt          DateTime     @default(now())
+
+  contacts  Contact[]
+  deals     Deal[]
+  contracts Contract[]
+
+  @@index([organizationId])
+}
+
+model Contact {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  companyId      String?
+  company        Company?     @relation(fields: [companyId], references: [id])
+  fullName       String
+  email          String?
+  phone          String?
+  title          String?
+  isSignatory    Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  deals             Deal[]
+  contracts         Contract[]
+  signatureRequests SignatureRequest[]
+
+  @@index([organizationId])
+  @@index([companyId])
+}
+
+model Deal {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  companyId      String?
+  company        Company?     @relation(fields: [companyId], references: [id])
+  contactId      String?
+  contact        Contact?     @relation(fields: [contactId], references: [id])
+  title          String
+  amount         Decimal?     @db.Decimal(12, 2)
+  currency       String       @default("ILS")
+  stage          String?
+  sourceCrm      String?
+  sourceCrmId    String?
+  createdAt      DateTime     @default(now())
+
+  contracts Contract[]
+
+  @@index([organizationId])
+  @@index([companyId])
+  @@index([contactId])
+}
+
+model IndustryPack {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  name           String
+  slug           String
+  description    String?
+  config         Json?
+  createdAt      DateTime      @default(now())
+
+  templates ContractTemplate[]
+
+  @@index([organizationId])
+}
+
+model ContractTemplate {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  industryPackId String?
+  industryPack   IndustryPack? @relation(fields: [industryPackId], references: [id])
+  name           String
+  language       String        @default("he")
+  contractType   String
+  content        Json
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+
+  contracts Contract[]
+
+  @@index([organizationId])
+  @@index([industryPackId])
+}
+
+model Clause {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  title          String
+  category       String
+  language       String       @default("he")
+  riskLevel      String
+  content        String       @db.Text
+  industry       String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+}
+
+model Contract {
+  id                     String            @id @default(cuid())
+  organizationId         String
+  organization           Organization      @relation(fields: [organizationId], references: [id])
+  companyId              String?
+  company                Company?          @relation(fields: [companyId], references: [id])
+  contactId              String?
+  contact                Contact?          @relation(fields: [contactId], references: [id])
+  dealId                 String?
+  deal                   Deal?             @relation(fields: [dealId], references: [id])
+  templateId             String?
+  template               ContractTemplate? @relation(fields: [templateId], references: [id])
+  title                  String
+  contractType           String
+  industry               String?
+  status                 ContractStatus    @default(DRAFT)
+  amount                 Decimal?          @db.Decimal(12, 2)
+  currency               String            @default("ILS")
+  startDate              DateTime?
+  endDate                DateTime?
+  renewalDate            DateTime?
+  cancellationNoticeDays Int?
+  internalOwnerId        String?
+  internalOwner          User?             @relation("ContractOwner", fields: [internalOwnerId], references: [id])
+  signedPdfUrl           String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  versions          ContractVersion[]
+  approvals         ApprovalRequest[]
+  signatureRequests SignatureRequest[]
+  obligations       ContractObligation[]
+  renewalReminders  RenewalReminder[]
+  auditLogs         AuditLog[]
+  comments          Comment[]
+  attachments       Attachment[]
+
+  @@index([organizationId])
+  @@index([companyId])
+  @@index([dealId])
+  @@index([status])
+  @@index([renewalDate])
+}
+
+enum ContractStatus {
+  DRAFT
+  INTERNAL_REVIEW
+  LEGAL_REVIEW
+  CLIENT_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+  SENT_FOR_SIGNATURE
+  SIGNED
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+model ContractVersion {
+  id            String   @id @default(cuid())
+  contractId    String
+  contract      Contract @relation(fields: [contractId], references: [id])
+  versionNumber Int
+  content       Json
+  createdById   String?
+  createdBy     User?    @relation(fields: [createdById], references: [id])
+  changeSummary String?
+  createdAt     DateTime @default(now())
+
+  @@index([contractId])
+}
+
+model ApprovalRequest {
+  id            String         @id @default(cuid())
+  contractId    String
+  contract      Contract       @relation(fields: [contractId], references: [id])
+  requestedById String?
+  requestedBy   User?          @relation("ApprovalRequester", fields: [requestedById], references: [id])
+  approverId    String?
+  approver      User?          @relation("ApprovalApprover", fields: [approverId], references: [id])
+  approvalType  String
+  status        ApprovalStatus @default(PENDING)
+  note          String?        @db.Text
+  createdAt     DateTime       @default(now())
+  respondedAt   DateTime?
+
+  @@index([contractId])
+  @@index([approverId])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model SignatureRequest {
+  id              String          @id @default(cuid())
+  contractId      String
+  contract        Contract        @relation(fields: [contractId], references: [id])
+  signerContactId String?
+  signerContact   Contact?        @relation(fields: [signerContactId], references: [id])
+  signerEmail     String
+  token           String          @unique
+  status          SignatureStatus @default(PENDING)
+  viewedAt        DateTime?
+  signedAt        DateTime?
+  ipAddress       String?
+  auditData       Json?
+  createdAt       DateTime        @default(now())
+
+  @@index([contractId])
+  @@index([signerContactId])
+}
+
+enum SignatureStatus {
+  PENDING
+  VIEWED
+  SIGNED
+  DECLINED
+  EXPIRED
+}
+
+model ContractObligation {
+  id             String           @id @default(cuid())
+  contractId     String
+  contract       Contract         @relation(fields: [contractId], references: [id])
+  title          String
+  description    String?          @db.Text
+  obligationType String
+  dueDate        DateTime?
+  ownerId        String?
+  owner          User?            @relation(fields: [ownerId], references: [id])
+  status         ObligationStatus @default(OPEN)
+  createdAt      DateTime         @default(now())
+
+  @@index([contractId])
+  @@index([ownerId])
+  @@index([dueDate])
+}
+
+enum ObligationStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+model RenewalReminder {
+  id           String         @id @default(cuid())
+  contractId   String
+  contract     Contract       @relation(fields: [contractId], references: [id])
+  reminderDate DateTime
+  reminderType String
+  status       ReminderStatus @default(SCHEDULED)
+  createdAt    DateTime       @default(now())
+
+  @@index([contractId])
+  @@index([reminderDate])
+}
+
+enum ReminderStatus {
+  SCHEDULED
+  SENT
+  DISMISSED
+  COMPLETED
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  contractId     String?
+  contract       Contract?    @relation(fields: [contractId], references: [id])
+  actorId        String?
+  action         String
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([contractId])
+}
+
+model CrmIntegration {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  provider       String
+  status         String
+  config         Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+}
+
+model Comment {
+  id         String     @id @default(cuid())
+  contractId String
+  contract   Contract   @relation(fields: [contractId], references: [id])
+  authorId   String?
+  author     User?      @relation(fields: [authorId], references: [id])
+  authorName String
+  visibility Visibility @default(INTERNAL)
+  body       String     @db.Text
+  createdAt  DateTime   @default(now())
+
+  @@index([contractId])
+}
+
+enum Visibility {
+  INTERNAL
+  CLIENT
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  contractId   String
+  contract     Contract @relation(fields: [contractId], references: [id])
+  fileName     String
+  fileUrl      String
+  fileType     String?
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([contractId])
+}

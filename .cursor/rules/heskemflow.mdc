@@ -1,0 +1,36 @@
+---
+description: HeskemFlow project rules and conventions
+globs: **/*.{ts,tsx}
+---
+
+# Project: HeskemFlow
+
+## Rules
+
+- Use TypeScript only.
+- Use Next.js App Router.
+- Use src/ directory.
+- Use Tailwind CSS.
+- Use shadcn/ui components where possible.
+- Use MySQL as the database.
+- Use Prisma as the ORM.
+- Do not use Supabase.
+- Use Clerk for authentication unless instructed otherwise.
+- UI language is Hebrew.
+- Layout direction is RTL.
+- Do not use external UI kits besides shadcn/ui and lucide-react.
+- Keep components small and reusable.
+- Do not put all logic in page.tsx.
+- Use mock data first before wiring MySQL.
+- Use server actions for database mutations later.
+- Keep all integration code behind provider interfaces.
+- Do not hardcode secrets.
+- Never expose DATABASE_URL or CLERK_SECRET_KEY to client components.
+- Add loading, empty, and error states for tables.
+- Use clean naming:
+  - ContractStatus
+  - ContractType
+  - IndustryPack
+  - ApprovalStatus
+  - SignatureStatus
+- The app must feel like a real CRM contract system, not a landing page.

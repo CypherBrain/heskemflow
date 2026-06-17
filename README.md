@@ -1,36 +1,154 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HeskemFlow — מערכת ניהול חוזים
 
-## Getting Started
+Contract lifecycle management system built with Next.js, Prisma, and Clerk.
 
-First, run the development server:
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router, Server Actions)
+- **Database:** MySQL / MariaDB via Prisma ORM
+- **Auth:** Clerk (Hebrew localization)
+- **UI:** Tailwind CSS, shadcn/ui
+- **Language:** TypeScript
+
+## Prerequisites
+
+- Node.js 20+
+- MySQL 8+ or MariaDB 10.6+
+- Clerk account (free tier works)
+
+## Local Development
+
+### 1. Install dependencies
+
+```bash
+cd heskemflow
+npm install
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your values:
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | MySQL connection string: `mysql://user:pass@host:port/dbname` |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key |
+| `CLERK_SECRET_KEY` | Clerk secret key |
+| `NEXT_PUBLIC_APP_URL` | App URL (default: `http://localhost:3000`) |
+
+### 3. Set up the database
+
+```bash
+# Create the database
+mysql -u root -p -e "CREATE DATABASE heskemflow"
+
+# Run migrations
+npx prisma migrate deploy
+
+# (Optional) Seed demo data
+npx prisma db seed
+```
+
+### 4. Start dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment (Vercel)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Push to GitHub
 
-## Learn More
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin <your-repo-url>
+git push -u origin main
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Create Vercel project
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Import the repo in [Vercel](https://vercel.com/new)
+- Set **Root Directory** to `heskemflow`
+- Framework preset: **Next.js** (auto-detected)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 3. Configure environment variables
 
-## Deploy on Vercel
+Add these in Vercel project settings > Environment Variables:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | Your production MySQL connection string |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk production key |
+| `CLERK_SECRET_KEY` | Clerk production secret |
+| `NEXT_PUBLIC_APP_URL` | `https://your-domain.vercel.app` |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 4. Database setup
+
+Use a managed MySQL provider:
+- [PlanetScale](https://planetscale.com)
+- [Aiven](https://aiven.io)
+- [Railway](https://railway.app)
+- [AWS RDS](https://aws.amazon.com/rds/)
+
+Run migrations against production:
+
+```bash
+DATABASE_URL="mysql://..." npx prisma migrate deploy
+```
+
+### 5. Deploy
+
+Vercel auto-deploys on push to `main`. Manual deploy:
+
+```bash
+npx vercel --prod
+```
+
+## Project Structure
+
+```
+heskemflow/
+├── prisma/
+│   ├── schema.prisma       # Database schema
+│   ├── migrations/          # Migration history
+│   └── seed.ts              # Demo data seeder
+├── src/
+│   ├── app/
+│   │   ├── (auth)/          # Sign-in / sign-up pages
+│   │   ├── (dashboard)/     # Protected dashboard routes
+│   │   └── client-portal/   # Public contract review portal
+│   ├── actions/             # Server actions
+│   ├── components/          # React components
+│   └── lib/                 # Utilities (auth, prisma, etc.)
+├── .env.example             # Environment template
+└── prisma.config.ts         # Prisma config
+```
+
+## Key Features
+
+- Contract creation with templates and clauses
+- Contract versioning and audit trail
+- Client portal for contract review and mock signature
+- CRM data management (companies, contacts, deals)
+- Role-based access control (ADMIN, MANAGER, LEGAL, SALES, VIEWER)
+- Hebrew RTL interface
+- Contract export (HTML / print-to-PDF)
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server |
+| `npm run build` | Production build |
+| `npm start` | Start production server |
+| `npx prisma migrate deploy` | Run migrations |
+| `npx prisma db seed` | Seed demo data |
+| `npx prisma studio` | Open database GUI |
