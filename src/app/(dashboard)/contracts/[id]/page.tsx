@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { getContractById, getOrgUsers } from "@/actions/contracts"
+import { listDepartments } from "@/actions/departments"
 import { statusLabels, statusColors, formatCurrency, formatDate } from "@/lib/contract-utils"
 import { serializePrisma } from "@/lib/serialize"
 import {
@@ -27,9 +28,10 @@ export default async function ContractDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [contract, users] = await Promise.all([
+  const [contract, users, departments] = await Promise.all([
     getContractById(id),
     getOrgUsers(),
+    listDepartments(),
   ])
 
   if (!contract) {
@@ -160,7 +162,11 @@ export default async function ContractDetailPage({
               </TabsContent>
 
               <TabsContent value="ai" className="p-6">
-                <ContractAiTab contractId={contract.id} />
+                <ContractAiTab
+                  contractId={contract.id}
+                  users={users.map((u) => ({ id: u.id, fullName: u.fullName }))}
+                  departments={departments.map((d) => ({ id: d.id, name: d.name }))}
+                />
               </TabsContent>
 
               <TabsContent value="versions" className="p-6 space-y-4">
@@ -497,6 +503,11 @@ function translateAction(action: string): string {
     CLAUSE_DELETED: "סעיף נמחק",
     AI_REVIEW_CREATED: "ניתוח AI בוצע",
     AI_OBLIGATIONS_CREATED: "התחייבויות AI נוצרו",
+    AI_OBLIGATIONS_ACCEPTED: "התחייבויות AI אושרו ושויכו",
+    OBLIGATION_COMPLETED: "התחייבות הושלמה",
+    DEPARTMENT_CREATED: "מחלקה נוצרה",
+    DEPARTMENT_UPDATED: "מחלקה עודכנה",
+    USER_DEPARTMENT_ASSIGNED: "משתמש שויך למחלקה",
   }
   return map[action] ?? action
 }

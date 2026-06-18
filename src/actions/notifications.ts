@@ -47,6 +47,23 @@ export interface SerializedNotification {
   department: { id: string; name: string } | null
 }
 
+export async function getAiActionNotifications() {
+  const { organizationId } = await getCurrentUser()
+  const notifications = await prisma.notification.findMany({
+    where: {
+      organizationId,
+      type: { in: ["AI_RISK_FOUND", "MISSING_CLAUSE"] },
+      status: { in: ["UNREAD", "READ"] },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    include: {
+      contract: { select: { id: true, title: true } },
+    },
+  })
+  return serializePrisma(notifications) as unknown as SerializedNotification[]
+}
+
 export async function getUnreadCount() {
   const { organizationId } = await getCurrentUser()
   return prisma.notification.count({

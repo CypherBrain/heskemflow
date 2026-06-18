@@ -2,18 +2,19 @@ import Link from "next/link"
 import { getDashboardStats, getRecentContracts, getContractStatusBreakdown, getUpcomingRenewals } from "@/actions/dashboard"
 import { getLatestAiInsights } from "@/actions/ai-review"
 import { getObligationStats } from "@/actions/obligations"
-import { listNotifications } from "@/actions/notifications"
+import { listNotifications, getAiActionNotifications } from "@/actions/notifications"
 import { DashboardStats } from "@/components/dashboard/stats-cards"
 import { DashboardRecentContracts } from "@/components/dashboard/recent-contracts"
 import { DashboardStatusChart } from "@/components/dashboard/contract-status-chart"
 import { DashboardRenewals } from "@/components/dashboard/upcoming-reminders"
 import { DashboardAiInsights } from "@/components/dashboard/ai-insights-card"
 import { DashboardObligationWidget, DashboardNotificationWidget } from "@/components/dashboard/obligation-notification-widgets"
+import { DashboardAiActionsWidget } from "@/components/dashboard/ai-actions-widget"
 import { Button } from "@/components/ui/button"
 import { Plus, ArrowLeft } from "lucide-react"
 
 export default async function DashboardPage() {
-  const [stats, recentContracts, statusBreakdown, renewals, aiInsights, obligationStats, recentNotifications] = await Promise.all([
+  const [stats, recentContracts, statusBreakdown, renewals, aiInsights, obligationStats, recentNotifications, aiActions] = await Promise.all([
     getDashboardStats(),
     getRecentContracts(),
     getContractStatusBreakdown(),
@@ -21,6 +22,7 @@ export default async function DashboardPage() {
     getLatestAiInsights(),
     getObligationStats(),
     listNotifications("UNREAD"),
+    getAiActionNotifications(),
   ])
 
   return (
@@ -87,7 +89,17 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <DashboardAiActionsWidget
+          items={aiActions.map((n) => ({
+            id: n.id,
+            type: n.type,
+            title: n.title,
+            severity: n.severity,
+            contractTitle: n.contract?.title ?? null,
+            contractId: n.contract?.id ?? null,
+          }))}
+        />
         <DashboardRenewals contracts={renewals} />
         <DashboardAiInsights insights={aiInsights} />
       </div>

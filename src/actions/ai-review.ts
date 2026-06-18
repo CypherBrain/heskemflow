@@ -287,7 +287,29 @@ export async function reviewContractRisks(contractId: string) {
       reviewType: "risk",
       riskScore: result.riskScore,
     })
+
+    // Auto-create notifications for high-severity findings
+    for (const finding of result.findings) {
+      if (finding.severity !== "high") continue
+      const exists = await prisma.notification.count({
+        where: { organizationId, contractId, type: "AI_RISK_FOUND", title: `סיכון AI: ${finding.title}`, status: { in: ["UNREAD", "READ"] } },
+      })
+      if (exists === 0) {
+        await prisma.notification.create({
+          data: {
+            organizationId, contractId,
+            type: "AI_RISK_FOUND",
+            title: `סיכון AI: ${finding.title}`,
+            message: `${finding.explanation}\n\nתיקון מוצע: ${finding.suggestedFix}`,
+            severity: "DANGER",
+            actionUrl: `/contracts/${contractId}`,
+          },
+        })
+      }
+    }
+
     revalidatePath(`/contracts/${contractId}`)
+    revalidatePath("/notifications")
 
     return { id: review.id, ...result }
   } catch (e) {
@@ -345,7 +367,29 @@ export async function detectMissingClauses(contractId: string) {
     })
 
     await createAuditLog(organizationId, contractId, "AI_REVIEW_CREATED", { reviewType: "missing_clauses" })
+
+    // Auto-create notifications for high-importance missing clauses
+    for (const clause of result.missingClauses) {
+      if (clause.importance !== "high") continue
+      const exists = await prisma.notification.count({
+        where: { organizationId, contractId, type: "MISSING_CLAUSE", title: `סעיף חסר: ${clause.clause}`, status: { in: ["UNREAD", "READ"] } },
+      })
+      if (exists === 0) {
+        await prisma.notification.create({
+          data: {
+            organizationId, contractId,
+            type: "MISSING_CLAUSE",
+            title: `סעיף חסר: ${clause.clause}`,
+            message: clause.reason,
+            severity: "WARNING",
+            actionUrl: `/contracts/${contractId}`,
+          },
+        })
+      }
+    }
+
     revalidatePath(`/contracts/${contractId}`)
+    revalidatePath("/notifications")
 
     return { id: review.id, ...result }
   } catch (e) {
@@ -458,6 +502,18 @@ export async function suggestClauseImprovements(contractId: string) {
 
 // --------------- Create Obligations from AI ---------------
 
+export interface EnrichedAiObligation {
+  title: string
+  description: string
+  obligationType: string
+  dueDate: string | null
+  ownerId: string | null
+  departmentId: string | null
+  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  triggerType: string | null
+  notifyBeforeDays: number | null
+}
+
 export async function createObligationsFromAi(
   contractId: string,
   obligations: Obligation[]
@@ -482,6 +538,7 @@ export async function createObligationsFromAi(
           description: ob.description,
           obligationType: typeMap[ob.type] ?? "other",
           dueDate: ob.dueDate ? new Date(ob.dueDate) : null,
+          source: "ai",
           status: "OPEN",
         },
       })
@@ -494,6 +551,174 @@ export async function createObligationsFromAi(
 
   revalidatePath(`/contracts/${contractId}`)
   return { count: created.length }
+}
+
+export async function createEnrichedObligationsFromAi(
+  contractId: string,
+  obligations: EnrichedAiObligation[]
+) {
+  const { organizationId } = await getCurrentUser()
+  const now = new Date()
+
+  const created = await Promise.all(
+    obligations.map((ob) =>
+      prisma.contractObligation.create({
+        data: {
+          contractId,
+          title: ob.title,
+          description: ob.description,
+          obligationType: ob.obligationType,
+          dueDate: ob.dueDate ? new Date(ob.dueDate) : null,
+          ownerId: ob.ownerId || null,
+          departmentId: ob.departmentId || null,
+          priority: ob.priority,
+          triggerType: (ob.triggerType as "DUE_DATE" | "RENEWAL_DATE" | "CANCELLATION_NOTICE" | "PAYMENT_DATE" | "DELIVERABLE_DATE" | "STATUS_CHANGE" | "SIGNATURE_PENDING" | "MANUAL") ?? null,
+          notifyBeforeDays: ob.notifyBeforeDays,
+          source: "ai",
+          status: "OPEN",
+        },
+      })
+    )
+  )
+
+  // Auto-create notifications for obligations that are due soon
+  for (const ob of created) {
+    if (!ob.dueDate) continue
+    const daysUntilDue = Math.ceil(
+      (ob.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    )
+    const notifyDays = ob.notifyBeforeDays ?? 7
+
+    if (daysUntilDue < 0) {
+      await prisma.notification.create({
+        data: {
+          organizationId,
+          contractId,
+          obligationId: ob.id,
+          userId: ob.ownerId,
+          departmentId: ob.departmentId,
+          type: "OBLIGATION_DUE",
+          title: "התחייבות AI באיחור",
+          message: `"${ob.title}" באיחור של ${Math.abs(daysUntilDue)} ימים (נוצרה מניתוח AI).`,
+          severity: "CRITICAL",
+          actionUrl: `/contracts/${contractId}`,
+          dueDate: ob.dueDate,
+        },
+      })
+    } else if (daysUntilDue <= notifyDays) {
+      const sev = ob.priority === "CRITICAL" ? "DANGER" as const : ob.priority === "HIGH" ? "WARNING" as const : "INFO" as const
+      await prisma.notification.create({
+        data: {
+          organizationId,
+          contractId,
+          obligationId: ob.id,
+          userId: ob.ownerId,
+          departmentId: ob.departmentId,
+          type: "OBLIGATION_DUE",
+          title: "התחייבות AI מתקרבת",
+          message: `"${ob.title}" בעוד ${daysUntilDue} ימים (נוצרה מניתוח AI).`,
+          severity: sev,
+          actionUrl: `/contracts/${contractId}`,
+          dueDate: ob.dueDate,
+        },
+      })
+    }
+  }
+
+  await createAuditLog(organizationId, contractId, "AI_OBLIGATIONS_ACCEPTED", {
+    count: created.length,
+    obligations: obligations.map((o) => ({ title: o.title, priority: o.priority, department: o.departmentId })),
+  })
+
+  revalidatePath(`/contracts/${contractId}`)
+  revalidatePath("/obligations")
+  revalidatePath("/notifications")
+  revalidatePath("/dashboard")
+  return { count: created.length }
+}
+
+// --------------- AI Risk → Notification ---------------
+
+export async function createNotificationsFromRisks(
+  contractId: string,
+  riskResult: RiskReview
+) {
+  const { organizationId } = await getCurrentUser()
+  let created = 0
+
+  for (const finding of riskResult.findings) {
+    if (finding.severity !== "high") continue
+    const exists = await prisma.notification.count({
+      where: {
+        organizationId,
+        contractId,
+        type: "AI_RISK_FOUND",
+        title: finding.title,
+        status: { in: ["UNREAD", "READ"] },
+      },
+    })
+    if (exists === 0) {
+      await prisma.notification.create({
+        data: {
+          organizationId,
+          contractId,
+          type: "AI_RISK_FOUND",
+          title: `סיכון AI: ${finding.title}`,
+          message: `${finding.explanation}\n\nתיקון מוצע: ${finding.suggestedFix}`,
+          severity: "DANGER",
+          actionUrl: `/contracts/${contractId}`,
+        },
+      })
+      created++
+    }
+  }
+
+  if (created > 0) {
+    revalidatePath("/notifications")
+    revalidatePath("/dashboard")
+  }
+  return { created }
+}
+
+export async function createNotificationsFromMissingClauses(
+  contractId: string,
+  missingResult: MissingClausesResponse
+) {
+  const { organizationId } = await getCurrentUser()
+  let created = 0
+
+  for (const clause of missingResult.missingClauses) {
+    if (clause.importance !== "high") continue
+    const exists = await prisma.notification.count({
+      where: {
+        organizationId,
+        contractId,
+        type: "MISSING_CLAUSE",
+        title: clause.clause,
+        status: { in: ["UNREAD", "READ"] },
+      },
+    })
+    if (exists === 0) {
+      await prisma.notification.create({
+        data: {
+          organizationId,
+          contractId,
+          type: "MISSING_CLAUSE",
+          title: `סעיף חסר: ${clause.clause}`,
+          message: clause.reason,
+          severity: "WARNING",
+          actionUrl: `/contracts/${contractId}`,
+        },
+      })
+      created++
+    }
+  }
+
+  if (created > 0) {
+    revalidatePath("/notifications")
+    revalidatePath("/dashboard")
+  }
+  return { created }
 }
 
 // --------------- Get AI Reviews (history) ---------------

@@ -3,6 +3,9 @@
 import { useState, useTransition, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import {
   Brain,
   ShieldAlert,
@@ -19,6 +22,8 @@ import {
   Info,
   History,
   Calendar,
+  Pencil,
+  Zap,
 } from "lucide-react"
 import {
   summarizeContract,
@@ -26,7 +31,7 @@ import {
   detectMissingClauses,
   extractObligations,
   suggestClauseImprovements,
-  createObligationsFromAi,
+  createEnrichedObligationsFromAi,
   getAiReviews,
 } from "@/actions/ai-review"
 import type {
@@ -37,10 +42,14 @@ import type {
   SuggestionsResponse,
   Obligation,
   AiReviewRecord,
+  EnrichedAiObligation,
 } from "@/actions/ai-review"
+import { OBLIGATION_TYPES } from "@/lib/obligation-types"
 
 interface ContractAiTabProps {
   contractId: string
+  users: { id: string; fullName: string }[]
+  departments: { id: string; name: string }[]
 }
 
 type SeverityLevel = "low" | "medium" | "high"
@@ -63,15 +72,6 @@ const severityIcons: Record<SeverityLevel, typeof Info> = {
   high: AlertCircle,
 }
 
-const obligationTypeLabels: Record<string, string> = {
-  payment: "תשלום",
-  renewal: "חידוש",
-  notice: "הודעה",
-  deliverable: "אספקה",
-  legal: "משפטי",
-  other: "אחר",
-}
-
 const reviewTypeLabels: Record<string, string> = {
   summary: "סיכום חוזה",
   risk: "בדיקת סיכונים",
@@ -80,7 +80,10 @@ const reviewTypeLabels: Record<string, string> = {
   suggestions: "הצעות לשיפור",
 }
 
-export function ContractAiTab({ contractId }: ContractAiTabProps) {
+const selectClass =
+  "flex h-8 w-full rounded-md border border-[#E2E8F0] bg-white px-2 text-xs outline-none focus:ring-1 focus:ring-[#2563EB]"
+
+export function ContractAiTab({ contractId, users, departments }: ContractAiTabProps) {
   const [summaryResult, setSummaryResult] = useState<SummaryResponse | null>(null)
   const [riskResult, setRiskResult] = useState<RiskReview | null>(null)
   const [missingResult, setMissingResult] = useState<MissingClausesResponse | null>(null)
@@ -90,6 +93,9 @@ export function ContractAiTab({ contractId }: ContractAiTabProps) {
   const [obligationsCreated, setObligationsCreated] = useState(false)
   const [history, setHistory] = useState<AiReviewRecord[]>([])
   const [showHistory, setShowHistory] = useState(false)
+
+  // Editable obligation state
+  const [editableObligations, setEditableObligations] = useState<EnrichedAiObligation[]>([])
 
   const [isSummarizing, startSummarize] = useTransition()
   const [isReviewingRisks, startRiskReview] = useTransition()
@@ -164,6 +170,20 @@ export function ContractAiTab({ contractId }: ContractAiTabProps) {
       try {
         const res = await extractObligations(contractId)
         setObligationsResult(res)
+        // Initialize editable state from AI results
+        setEditableObligations(
+          res.obligations.map((ob) => ({
+            title: ob.title,
+            description: ob.description,
+            obligationType: mapAiTypeToSlug(ob.type),
+            dueDate: ob.dueDate || null,
+            ownerId: null,
+            departmentId: null,
+            priority: "MEDIUM" as const,
+            triggerType: guessTriggerType(ob.type),
+            notifyBeforeDays: 7,
+          }))
+        )
         loadHistory()
       } catch (e) {
         setError(e instanceof Error ? e.message : "שגיאה בחילוץ התחייבויות")
@@ -184,17 +204,27 @@ export function ContractAiTab({ contractId }: ContractAiTabProps) {
     })
   }
 
-  function handleCreateObligations() {
-    if (!obligationsResult?.obligations) return
+  function handleCreateEnrichedObligations() {
+    if (editableObligations.length === 0) return
     startCreateObs(async () => {
       try {
-        await createObligationsFromAi(contractId, obligationsResult.obligations)
+        await createEnrichedObligationsFromAi(contractId, editableObligations)
         setObligationsCreated(true)
         loadHistory()
       } catch (e) {
         setError(e instanceof Error ? e.message : "שגיאה ביצירת התחייבויות")
       }
     })
+  }
+
+  function updateObligation(index: number, patch: Partial<EnrichedAiObligation>) {
+    setEditableObligations((prev) =>
+      prev.map((ob, i) => (i === index ? { ...ob, ...patch } : ob))
+    )
+  }
+
+  function removeObligation(index: number) {
+    setEditableObligations((prev) => prev.filter((_, i) => i !== index))
   }
 
   return (
@@ -221,51 +251,11 @@ export function ContractAiTab({ contractId }: ContractAiTabProps) {
 
       {/* Action Buttons */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <ActionButton
-          icon={Sparkles}
-          label="סיכום חוזה"
-          description="סיכום תמציתי ותנאים עסקיים"
-          onClick={handleSummarize}
-          isLoading={isSummarizing}
-          disabled={isAnyLoading}
-          color="from-[#2563EB] to-[#3B82F6]"
-        />
-        <ActionButton
-          icon={ShieldAlert}
-          label="בדיקת סיכונים"
-          description="זיהוי סיכונים ונקודות תורפה"
-          onClick={handleRiskReview}
-          isLoading={isReviewingRisks}
-          disabled={isAnyLoading}
-          color="from-[#DC2626] to-[#EF4444]"
-        />
-        <ActionButton
-          icon={SearchCheck}
-          label="איתור סעיפים חסרים"
-          description="בדיקת סעיפים שחשוב להוסיף"
-          onClick={handleMissingClauses}
-          isLoading={isDetectingMissing}
-          disabled={isAnyLoading}
-          color="from-[#D97706] to-[#F59E0B]"
-        />
-        <ActionButton
-          icon={ListChecks}
-          label="חילוץ התחייבויות"
-          description="חילוץ אוטומטי של כל ההתחייבויות"
-          onClick={handleExtractObligations}
-          isLoading={isExtracting}
-          disabled={isAnyLoading}
-          color="from-[#16A34A] to-[#22C55E]"
-        />
-        <ActionButton
-          icon={Lightbulb}
-          label="הצעות לשיפור סעיפים"
-          description="שיפור ניסוחים והפחתת סיכונים"
-          onClick={handleSuggest}
-          isLoading={isSuggesting}
-          disabled={isAnyLoading}
-          color="from-[#7C3AED] to-[#A855F7]"
-        />
+        <ActionButton icon={Sparkles} label="סיכום חוזה" description="סיכום תמציתי ותנאים עסקיים" onClick={handleSummarize} isLoading={isSummarizing} disabled={isAnyLoading} color="from-[#2563EB] to-[#3B82F6]" />
+        <ActionButton icon={ShieldAlert} label="בדיקת סיכונים" description="זיהוי סיכונים + התראות אוטומטיות" onClick={handleRiskReview} isLoading={isReviewingRisks} disabled={isAnyLoading} color="from-[#DC2626] to-[#EF4444]" />
+        <ActionButton icon={SearchCheck} label="איתור סעיפים חסרים" description="בדיקת שלמות + התראות אוטומטיות" onClick={handleMissingClauses} isLoading={isDetectingMissing} disabled={isAnyLoading} color="from-[#D97706] to-[#F59E0B]" />
+        <ActionButton icon={ListChecks} label="חילוץ התחייבויות" description="חילוץ → עריכה → שיוך למחלקה" onClick={handleExtractObligations} isLoading={isExtracting} disabled={isAnyLoading} color="from-[#16A34A] to-[#22C55E]" />
+        <ActionButton icon={Lightbulb} label="הצעות לשיפור סעיפים" description="שיפור ניסוחים והפחתת סיכונים" onClick={handleSuggest} isLoading={isSuggesting} disabled={isAnyLoading} color="from-[#7C3AED] to-[#A855F7]" />
       </div>
 
       {/* Error */}
@@ -283,11 +273,16 @@ export function ContractAiTab({ contractId }: ContractAiTabProps) {
       {riskResult && <RiskCard data={riskResult} />}
       {missingResult && <MissingClausesCard data={missingResult} />}
       {obligationsResult && (
-        <ObligationsCard
-          data={obligationsResult}
-          onCreateObligations={handleCreateObligations}
+        <EditableObligationsCard
+          rawObligations={obligationsResult.obligations}
+          editableObligations={editableObligations}
+          onUpdate={updateObligation}
+          onRemove={removeObligation}
+          onCreateAll={handleCreateEnrichedObligations}
           isCreating={isCreatingObs}
           created={obligationsCreated}
+          users={users}
+          departments={departments}
         />
       )}
       {suggestionsResult && <SuggestionsCard data={suggestionsResult} />}
@@ -309,24 +304,38 @@ export function ContractAiTab({ contractId }: ContractAiTabProps) {
   )
 }
 
+// --------------- Helpers ---------------
+
+function mapAiTypeToSlug(aiType: string): string {
+  const map: Record<string, string> = {
+    payment: "payment",
+    renewal: "renewal",
+    notice: "cancellation_notice",
+    deliverable: "deliverable",
+    legal: "legal_review",
+    other: "other",
+  }
+  return map[aiType] ?? "other"
+}
+
+function guessTriggerType(aiType: string): string | null {
+  const map: Record<string, string> = {
+    payment: "PAYMENT_DATE",
+    renewal: "RENEWAL_DATE",
+    notice: "CANCELLATION_NOTICE",
+    deliverable: "DELIVERABLE_DATE",
+    legal: "DUE_DATE",
+    other: "DUE_DATE",
+  }
+  return map[aiType] ?? null
+}
+
 // --------------- Action Button ---------------
 
 function ActionButton({
-  icon: Icon,
-  label,
-  description,
-  onClick,
-  isLoading,
-  disabled,
-  color,
+  icon: Icon, label, description, onClick, isLoading, disabled, color,
 }: {
-  icon: typeof Sparkles
-  label: string
-  description: string
-  onClick: () => void
-  isLoading: boolean
-  disabled: boolean
-  color: string
+  icon: typeof Sparkles; label: string; description: string; onClick: () => void; isLoading: boolean; disabled: boolean; color: string
 }) {
   return (
     <button
@@ -334,14 +343,8 @@ function ActionButton({
       disabled={disabled}
       className="group relative flex items-center gap-3 rounded-xl border border-[#E2E8F0] p-4 text-start transition-all hover:border-[#CBD5E1] hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      <div
-        className={`flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${color} transition-transform group-hover:scale-105`}
-      >
-        {isLoading ? (
-          <Loader2 className="size-5 text-white animate-spin" />
-        ) : (
-          <Icon className="size-5 text-white" />
-        )}
+      <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${color} transition-transform group-hover:scale-105`}>
+        {isLoading ? <Loader2 className="size-5 text-white animate-spin" /> : <Icon className="size-5 text-white" />}
       </div>
       <div>
         <p className="text-sm font-bold text-[#0F172A]">{label}</p>
@@ -357,13 +360,7 @@ function SummaryCard({ data }: { data: SummaryResponse }) {
   const [expanded, setExpanded] = useState(true)
 
   return (
-    <ResultCard
-      title="סיכום החוזה"
-      icon={Sparkles}
-      color="bg-[#DBEAFE] text-[#2563EB]"
-      expanded={expanded}
-      onToggle={() => setExpanded(!expanded)}
-    >
+    <ResultCard title="סיכום החוזה" icon={Sparkles} color="bg-[#DBEAFE] text-[#2563EB]" expanded={expanded} onToggle={() => setExpanded(!expanded)}>
       <p className="text-sm text-[#334155] leading-relaxed">{data.summary}</p>
 
       {data.keyPoints.length > 0 && (
@@ -380,7 +377,6 @@ function SummaryCard({ data }: { data: SummaryResponse }) {
         </div>
       )}
 
-      {/* Business Terms */}
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
         <TermCard label="סכום" value={data.businessTerms.amount} />
         <TermCard label="מטבע" value={data.businessTerms.currency} />
@@ -390,7 +386,6 @@ function SummaryCard({ data }: { data: SummaryResponse }) {
         <TermCard label="הודעה לביטול" value={data.businessTerms.cancellationNotice} />
       </div>
 
-      {/* Plain Hebrew */}
       {data.plainHebrewExplanation && (
         <div className="mt-4 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] p-4">
           <p className="text-[10px] font-bold text-[#2563EB] mb-1.5">בעברית פשוטה</p>
@@ -416,31 +411,17 @@ function TermCard({ label, value }: { label: string; value: string | null }) {
 function RiskCard({ data }: { data: RiskReview }) {
   const [expanded, setExpanded] = useState(true)
 
-  const scoreColor =
-    data.riskScore <= 30 ? "text-[#16A34A]" : data.riskScore <= 60 ? "text-[#D97706]" : "text-[#DC2626]"
-  const scoreLabel =
-    data.riskScore <= 30 ? "סיכון נמוך" : data.riskScore <= 60 ? "סיכון בינוני" : "סיכון גבוה"
-  const strokeColor =
-    data.riskScore <= 30 ? "#16A34A" : data.riskScore <= 60 ? "#D97706" : "#DC2626"
+  const scoreColor = data.riskScore <= 30 ? "text-[#16A34A]" : data.riskScore <= 60 ? "text-[#D97706]" : "text-[#DC2626]"
+  const scoreLabel = data.riskScore <= 30 ? "סיכון נמוך" : data.riskScore <= 60 ? "סיכון בינוני" : "סיכון גבוה"
+  const strokeColor = data.riskScore <= 30 ? "#16A34A" : data.riskScore <= 60 ? "#D97706" : "#DC2626"
 
   return (
-    <ResultCard
-      title="ניתוח סיכונים"
-      icon={ShieldAlert}
-      color="bg-[#FEE2E2] text-[#DC2626]"
-      expanded={expanded}
-      onToggle={() => setExpanded(!expanded)}
-    >
+    <ResultCard title="ניתוח סיכונים" icon={ShieldAlert} color="bg-[#FEE2E2] text-[#DC2626]" expanded={expanded} onToggle={() => setExpanded(!expanded)}>
       <div className="flex items-center gap-4 mb-4">
         <div className="relative flex size-20 items-center justify-center">
           <svg className="size-20 -rotate-90" viewBox="0 0 80 80">
             <circle cx="40" cy="40" r="35" fill="none" stroke="#E2E8F0" strokeWidth="6" />
-            <circle
-              cx="40" cy="40" r="35" fill="none"
-              stroke={strokeColor}
-              strokeWidth="6" strokeLinecap="round"
-              strokeDasharray={`${(data.riskScore / 100) * 220} 220`}
-            />
+            <circle cx="40" cy="40" r="35" fill="none" stroke={strokeColor} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${(data.riskScore / 100) * 220} 220`} />
           </svg>
           <span className={`absolute text-lg font-extrabold ${scoreColor}`}>{data.riskScore}</span>
         </div>
@@ -459,19 +440,15 @@ function RiskCard({ data }: { data: RiskReview }) {
               <div key={i} className="rounded-xl border border-[#E2E8F0] p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <SIcon
-                      className="size-4"
-                      style={{ color: finding.severity === "high" ? "#DC2626" : finding.severity === "medium" ? "#D97706" : "#16A34A" }}
-                    />
+                    <SIcon className="size-4" style={{ color: finding.severity === "high" ? "#DC2626" : finding.severity === "medium" ? "#D97706" : "#16A34A" }} />
                     <p className="text-sm font-bold text-[#0F172A]">{finding.title}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className="text-[10px] font-semibold rounded-lg bg-[#F1F5F9] text-[#64748B]">
-                      {finding.category}
-                    </Badge>
-                    <Badge className={`text-[10px] font-bold rounded-lg ${severityColors[finding.severity]}`}>
-                      {severityLabels[finding.severity]}
-                    </Badge>
+                    <Badge className="text-[10px] font-semibold rounded-lg bg-[#F1F5F9] text-[#64748B]">{finding.category}</Badge>
+                    <Badge className={`text-[10px] font-bold rounded-lg ${severityColors[finding.severity]}`}>{severityLabels[finding.severity]}</Badge>
+                    {finding.severity === "high" && (
+                      <Badge className="text-[10px] font-bold rounded-lg bg-[#DC2626] text-white">התראה נוצרה</Badge>
+                    )}
                   </div>
                 </div>
                 <p className="text-xs text-[#64748B] leading-relaxed">{finding.explanation}</p>
@@ -494,13 +471,7 @@ function MissingClausesCard({ data }: { data: MissingClausesResponse }) {
   const [expanded, setExpanded] = useState(true)
 
   return (
-    <ResultCard
-      title="סעיפים חסרים"
-      icon={SearchCheck}
-      color="bg-[#FEF3C7] text-[#D97706]"
-      expanded={expanded}
-      onToggle={() => setExpanded(!expanded)}
-    >
+    <ResultCard title="סעיפים חסרים" icon={SearchCheck} color="bg-[#FEF3C7] text-[#D97706]" expanded={expanded} onToggle={() => setExpanded(!expanded)}>
       {data.missingClauses.length === 0 ? (
         <div className="text-center py-6">
           <CheckCircle2 className="size-8 text-[#16A34A] mx-auto mb-2" />
@@ -512,9 +483,12 @@ function MissingClausesCard({ data }: { data: MissingClausesResponse }) {
             <div key={i} className="rounded-xl border border-[#E2E8F0] p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold text-[#0F172A]">{clause.clause}</p>
-                <Badge className={`text-[10px] font-bold rounded-lg ${severityColors[clause.importance]}`}>
-                  {severityLabels[clause.importance]}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge className={`text-[10px] font-bold rounded-lg ${severityColors[clause.importance]}`}>{severityLabels[clause.importance]}</Badge>
+                  {clause.importance === "high" && (
+                    <Badge className="text-[10px] font-bold rounded-lg bg-[#D97706] text-white">התראה נוצרה</Badge>
+                  )}
+                </div>
               </div>
               <p className="text-xs text-[#64748B] leading-relaxed">{clause.reason}</p>
               <div className="rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] p-3">
@@ -529,83 +503,213 @@ function MissingClausesCard({ data }: { data: MissingClausesResponse }) {
   )
 }
 
-// --------------- Obligations Card ---------------
+// --------------- Editable Obligations Card ---------------
 
-function ObligationsCard({
-  data,
-  onCreateObligations,
+function EditableObligationsCard({
+  rawObligations,
+  editableObligations,
+  onUpdate,
+  onRemove,
+  onCreateAll,
   isCreating,
   created,
+  users,
+  departments,
 }: {
-  data: ObligationsResponse
-  onCreateObligations: () => void
+  rawObligations: Obligation[]
+  editableObligations: EnrichedAiObligation[]
+  onUpdate: (i: number, patch: Partial<EnrichedAiObligation>) => void
+  onRemove: (i: number) => void
+  onCreateAll: () => void
   isCreating: boolean
   created: boolean
+  users: { id: string; fullName: string }[]
+  departments: { id: string; name: string }[]
 }) {
   const [expanded, setExpanded] = useState(true)
 
   return (
-    <ResultCard
-      title="התחייבויות שזוהו"
-      icon={ListChecks}
-      color="bg-[#DCFCE7] text-[#16A34A]"
-      expanded={expanded}
-      onToggle={() => setExpanded(!expanded)}
-    >
-      {data.obligations.length === 0 ? (
+    <ResultCard title="התחייבויות שזוהו" icon={ListChecks} color="bg-[#DCFCE7] text-[#16A34A]" expanded={expanded} onToggle={() => setExpanded(!expanded)}>
+      {editableObligations.length === 0 && !created ? (
         <div className="text-center py-6">
           <p className="text-sm text-[#94A3B8]">לא נמצאו התחייבויות</p>
         </div>
+      ) : created ? (
+        <div className="flex items-center gap-2 rounded-xl bg-[#F0FDF4] border border-[#BBF7D0] p-4">
+          <CheckCircle2 className="size-5 text-[#16A34A]" />
+          <div>
+            <p className="text-sm font-bold text-[#16A34A]">
+              {rawObligations.length} התחייבויות נוצרו בהצלחה עם טריגרים והתראות
+            </p>
+            <p className="text-xs text-[#166534] mt-0.5">ההתחייבויות שויכו למחלקות ואחראים. התראות נוצרו אוטומטית עבור מועדים קרובים.</p>
+          </div>
+        </div>
       ) : (
         <>
-          <div className="space-y-3">
-            {data.obligations.map((ob: Obligation, i: number) => (
-              <div key={i} className="rounded-xl border border-[#E2E8F0] p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-1 min-w-0">
-                    <p className="text-sm font-bold text-[#0F172A]">{ob.title}</p>
-                    <p className="text-xs text-[#64748B] leading-relaxed">{ob.description}</p>
-                  </div>
-                  <Badge className="text-[10px] font-bold rounded-lg bg-[#F1F5F9] text-[#64748B] shrink-0">
-                    {obligationTypeLabels[ob.type] ?? ob.type}
+          <div className="rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] p-3 mb-4">
+            <div className="flex items-center gap-2">
+              <Pencil className="size-4 text-[#2563EB]" />
+              <p className="text-xs text-[#1E40AF] font-medium">
+                ערוך כל התחייבות — שייך מחלקה, אחראי, עדיפות וטריגר לפני יצירה.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {editableObligations.map((ob, i) => (
+              <div key={i} className="rounded-xl border border-[#E2E8F0] p-4 space-y-3 bg-white">
+                <div className="flex items-center justify-between">
+                  <Badge className="text-[10px] font-bold rounded-lg bg-[#DBEAFE] text-[#2563EB]">
+                    #{i + 1} — AI
                   </Badge>
+                  <button
+                    onClick={() => onRemove(i)}
+                    className="text-[10px] text-[#94A3B8] hover:text-[#DC2626] font-medium transition-colors"
+                  >
+                    הסר
+                  </button>
                 </div>
-                <div className="flex flex-wrap gap-3 mt-2 text-[11px] text-[#94A3B8]">
-                  {ob.dueDate && <span>תאריך יעד: {ob.dueDate}</span>}
-                  {ob.owner && <span>אחראי: {ob.owner}</span>}
-                  {ob.source && <span>מקור: {ob.source}</span>}
+
+                {/* Title + Description */}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#64748B]">כותרת</Label>
+                    <Input
+                      value={ob.title}
+                      onChange={(e) => onUpdate(i, { title: e.target.value })}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#64748B]">סוג התחייבות</Label>
+                    <select
+                      value={ob.obligationType}
+                      onChange={(e) => onUpdate(i, { obligationType: e.target.value })}
+                      className={selectClass}
+                    >
+                      {OBLIGATION_TYPES.map((t) => (
+                        <option key={t.slug} value={t.slug}>{t.hebrewName}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#64748B]">תיאור</Label>
+                  <Textarea
+                    value={ob.description}
+                    onChange={(e) => onUpdate(i, { description: e.target.value })}
+                    className="text-xs min-h-[40px]"
+                    rows={2}
+                  />
+                </div>
+
+                {/* Department + Owner + Priority */}
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#64748B]">מחלקה</Label>
+                    <select
+                      value={ob.departmentId ?? ""}
+                      onChange={(e) => onUpdate(i, { departmentId: e.target.value || null })}
+                      className={selectClass}
+                    >
+                      <option value="">ללא</option>
+                      {departments.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#64748B]">אחראי</Label>
+                    <select
+                      value={ob.ownerId ?? ""}
+                      onChange={(e) => onUpdate(i, { ownerId: e.target.value || null })}
+                      className={selectClass}
+                    >
+                      <option value="">ללא</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>{u.fullName}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#64748B]">עדיפות</Label>
+                    <select
+                      value={ob.priority}
+                      onChange={(e) => onUpdate(i, { priority: e.target.value as EnrichedAiObligation["priority"] })}
+                      className={selectClass}
+                    >
+                      <option value="LOW">נמוך</option>
+                      <option value="MEDIUM">בינוני</option>
+                      <option value="HIGH">גבוה</option>
+                      <option value="CRITICAL">קריטי</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Due date + Trigger + NotifyBefore */}
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#64748B]">תאריך יעד</Label>
+                    <Input
+                      type="date"
+                      value={ob.dueDate ?? ""}
+                      onChange={(e) => onUpdate(i, { dueDate: e.target.value || null })}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#64748B]">סוג טריגר</Label>
+                    <select
+                      value={ob.triggerType ?? ""}
+                      onChange={(e) => onUpdate(i, { triggerType: e.target.value || null })}
+                      className={selectClass}
+                    >
+                      <option value="">ללא</option>
+                      <option value="DUE_DATE">תאריך יעד</option>
+                      <option value="RENEWAL_DATE">חידוש</option>
+                      <option value="CANCELLATION_NOTICE">הודעת ביטול</option>
+                      <option value="PAYMENT_DATE">תשלום</option>
+                      <option value="DELIVERABLE_DATE">מסירה</option>
+                      <option value="STATUS_CHANGE">שינוי סטטוס</option>
+                      <option value="SIGNATURE_PENDING">חתימה</option>
+                      <option value="MANUAL">ידני</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#64748B]">התראה לפני (ימים)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={365}
+                      value={ob.notifyBeforeDays ?? ""}
+                      onChange={(e) => onUpdate(i, { notifyBeforeDays: e.target.value ? parseInt(e.target.value) : null })}
+                      className="h-8 text-xs"
+                    />
+                  </div>
                 </div>
               </div>
             ))}
           </div>
 
           <div className="mt-4 pt-4 border-t border-[#E2E8F0]">
-            {created ? (
-              <div className="flex items-center gap-2 rounded-xl bg-[#F0FDF4] border border-[#BBF7D0] p-3">
-                <CheckCircle2 className="size-4 text-[#16A34A]" />
-                <p className="text-sm font-semibold text-[#16A34A]">
-                  {data.obligations.length} התחייבויות נוצרו בהצלחה
-                </p>
-              </div>
-            ) : (
-              <Button
-                onClick={onCreateObligations}
-                disabled={isCreating}
-                className="w-full bg-gradient-to-l from-[#16A34A] to-[#22C55E] hover:from-[#15803D] hover:to-[#16A34A] text-white rounded-xl"
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="size-4 ml-2 animate-spin" />
-                    יוצר התחייבויות...
-                  </>
-                ) : (
-                  <>
-                    <ListChecks className="size-4 ml-2" />
-                    צור התחייבויות מתוך הניתוח ({data.obligations.length})
-                  </>
-                )}
-              </Button>
-            )}
+            <Button
+              onClick={onCreateAll}
+              disabled={isCreating || editableObligations.length === 0}
+              className="w-full bg-gradient-to-l from-[#16A34A] to-[#22C55E] hover:from-[#15803D] hover:to-[#16A34A] text-white rounded-xl gap-2"
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  יוצר התחייבויות וטריגרים...
+                </>
+              ) : (
+                <>
+                  <Zap className="size-4" />
+                  צור התחייבויות וטריגרים ({editableObligations.length})
+                </>
+              )}
+            </Button>
           </div>
         </>
       )}
@@ -619,13 +723,7 @@ function SuggestionsCard({ data }: { data: SuggestionsResponse }) {
   const [expanded, setExpanded] = useState(true)
 
   return (
-    <ResultCard
-      title="הצעות לשיפור סעיפים"
-      icon={Lightbulb}
-      color="bg-[#EDE9FE] text-[#7C3AED]"
-      expanded={expanded}
-      onToggle={() => setExpanded(!expanded)}
-    >
+    <ResultCard title="הצעות לשיפור סעיפים" icon={Lightbulb} color="bg-[#EDE9FE] text-[#7C3AED]" expanded={expanded} onToggle={() => setExpanded(!expanded)}>
       {data.suggestions.length === 0 ? (
         <div className="text-center py-6">
           <CheckCircle2 className="size-8 text-[#16A34A] mx-auto mb-2" />
@@ -697,15 +795,7 @@ function HistorySection({ reviews, isLoading }: { reviews: AiReviewRecord[]; isL
                   {reviewTypeLabels[review.reviewType] ?? review.reviewType}
                 </Badge>
                 {review.riskScore !== null && (
-                  <Badge
-                    className={`text-[10px] font-bold rounded-lg ${
-                      review.riskScore <= 30
-                        ? "bg-[#DCFCE7] text-[#16A34A]"
-                        : review.riskScore <= 60
-                          ? "bg-[#FEF3C7] text-[#D97706]"
-                          : "bg-[#FEE2E2] text-[#DC2626]"
-                    }`}
-                  >
+                  <Badge className={`text-[10px] font-bold rounded-lg ${review.riskScore <= 30 ? "bg-[#DCFCE7] text-[#16A34A]" : review.riskScore <= 60 ? "bg-[#FEF3C7] text-[#D97706]" : "bg-[#FEE2E2] text-[#DC2626]"}`}>
                     ציון: {review.riskScore}
                   </Badge>
                 )}
@@ -728,19 +818,9 @@ function HistorySection({ reviews, isLoading }: { reviews: AiReviewRecord[]; isL
 // --------------- Result Card Wrapper ---------------
 
 function ResultCard({
-  title,
-  icon: Icon,
-  color,
-  expanded,
-  onToggle,
-  children,
+  title, icon: Icon, color, expanded, onToggle, children,
 }: {
-  title: string
-  icon: typeof Sparkles
-  color: string
-  expanded: boolean
-  onToggle: () => void
-  children: React.ReactNode
+  title: string; icon: typeof Sparkles; color: string; expanded: boolean; onToggle: () => void; children: React.ReactNode
 }) {
   return (
     <div className="rounded-2xl border border-[#E2E8F0] overflow-hidden">
