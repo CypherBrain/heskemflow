@@ -48,8 +48,8 @@ export async function getContractById(id: string) {
         include: { signerContact: true },
       },
       obligations: {
-        orderBy: { dueDate: "asc" },
-        include: { owner: true },
+        orderBy: [{ dueDate: "asc" }, { priority: "desc" }],
+        include: { owner: true, department: true },
       },
       renewalReminders: {
         orderBy: { reminderDate: "asc" },

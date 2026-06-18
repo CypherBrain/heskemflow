@@ -19,6 +19,7 @@ import {
 import { ContractDocumentTab } from "@/components/contracts/contract-document-tab"
 import type { VersionContentData } from "@/components/contracts/contract-document-tab"
 import { ContractExportView } from "@/components/contracts/contract-export-view"
+import { ContractAiTab } from "@/components/contracts/contract-ai-tab"
 
 export default async function ContractDetailPage({
   params,
@@ -79,6 +80,7 @@ export default async function ContractDetailPage({
                   <TabsTrigger value="overview">סקירה</TabsTrigger>
                   <TabsTrigger value="document">מסמך חוזה</TabsTrigger>
                   <TabsTrigger value="export">ייצוא</TabsTrigger>
+                  <TabsTrigger value="ai">בינה חוזית</TabsTrigger>
                   <TabsTrigger value="versions">גרסאות ({contract.versions.length})</TabsTrigger>
                   <TabsTrigger value="approvals">אישורים ({contract.approvals.length})</TabsTrigger>
                   <TabsTrigger value="obligations">התחייבויות ({contract.obligations.length})</TabsTrigger>
@@ -157,6 +159,10 @@ export default async function ContractDetailPage({
                 })()}
               </TabsContent>
 
+              <TabsContent value="ai" className="p-6">
+                <ContractAiTab contractId={contract.id} />
+              </TabsContent>
+
               <TabsContent value="versions" className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-[#0F172A]">גרסאות חוזה</h3>
@@ -226,24 +232,37 @@ export default async function ContractDetailPage({
                   <EmptyState text="אין התחייבויות" />
                 ) : (
                   <div className="space-y-3">
-                    {contract.obligations.map((ob) => (
-                      <div key={ob.id} className="rounded-xl border border-[#E2E8F0] p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold text-[#0F172A]">{ob.title}</p>
-                            {ob.description && <p className="text-xs text-[#64748B]">{ob.description}</p>}
-                            <div className="flex gap-3 text-xs text-[#94A3B8]">
-                              <span>סוג: {ob.obligationType}</span>
-                              {ob.dueDate && <span>יעד: {formatDate(ob.dueDate)}</span>}
-                              {ob.owner && <span>אחראי: {ob.owner.fullName}</span>}
+                    {contract.obligations.map((ob) => {
+                      const isOverdue = ob.dueDate && new Date(ob.dueDate) < new Date() && ob.status !== "COMPLETED"
+                      const priorityColors: Record<string, string> = { LOW: "bg-[#F1F5F9] text-[#64748B]", MEDIUM: "bg-[#DBEAFE] text-[#2563EB]", HIGH: "bg-[#FEF3C7] text-[#D97706]", CRITICAL: "bg-[#FEE2E2] text-[#DC2626]" }
+                      const priorityLabels: Record<string, string> = { LOW: "נמוך", MEDIUM: "בינוני", HIGH: "גבוה", CRITICAL: "קריטי" }
+                      return (
+                        <div key={ob.id} className={`rounded-xl border p-4 ${isOverdue ? "border-red-200" : "border-[#E2E8F0]"}`}>
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold text-[#0F172A]">{ob.title}</p>
+                                <Badge className={`text-[10px] font-bold rounded-lg ${priorityColors[ob.priority]}`}>
+                                  {priorityLabels[ob.priority]}
+                                </Badge>
+                              </div>
+                              {ob.description && <p className="text-xs text-[#64748B]">{ob.description}</p>}
+                              <div className="flex flex-wrap gap-3 text-xs text-[#94A3B8]">
+                                <span>סוג: {ob.obligationType}</span>
+                                {ob.dueDate && <span className={isOverdue ? "text-[#DC2626] font-semibold" : ""}>יעד: {formatDate(ob.dueDate)}</span>}
+                                {ob.owner && <span>אחראי: {ob.owner.fullName}</span>}
+                                {ob.department && <span>מחלקה: {ob.department.name}</span>}
+                                {ob.triggerType && <span>טריגר: {ob.triggerType}</span>}
+                                <span>מקור: {ob.source === "ai" ? "AI" : ob.source === "template" ? "תבנית" : "ידני"}</span>
+                              </div>
                             </div>
+                            <Badge className={`text-[10px] font-bold rounded-lg shrink-0 ${isOverdue ? "bg-[#FEE2E2] text-[#DC2626]" : ob.status === "COMPLETED" ? "bg-[#DCFCE7] text-[#16A34A]" : ob.status === "IN_PROGRESS" ? "bg-[#DBEAFE] text-[#2563EB]" : "bg-[#F1F5F9] text-[#64748B]"}`}>
+                              {isOverdue ? "באיחור" : ob.status === "OPEN" ? "פתוח" : ob.status === "IN_PROGRESS" ? "בתהליך" : ob.status === "COMPLETED" ? "הושלם" : "באיחור"}
+                            </Badge>
                           </div>
-                          <Badge className={`text-[10px] font-bold rounded-lg ${ob.status === "COMPLETED" ? "bg-[#DCFCE7] text-[#16A34A]" : ob.status === "OVERDUE" ? "bg-[#FEE2E2] text-[#DC2626]" : "bg-[#F1F5F9] text-[#64748B]"}`}>
-                            {ob.status === "OPEN" ? "פתוח" : ob.status === "IN_PROGRESS" ? "בתהליך" : ob.status === "COMPLETED" ? "הושלם" : "באיחור"}
-                          </Badge>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </TabsContent>
@@ -476,6 +495,8 @@ function translateAction(action: string): string {
     CLAUSE_CREATED: "סעיף נוצר",
     CLAUSE_UPDATED: "סעיף עודכן",
     CLAUSE_DELETED: "סעיף נמחק",
+    AI_REVIEW_CREATED: "ניתוח AI בוצע",
+    AI_OBLIGATIONS_CREATED: "התחייבויות AI נוצרו",
   }
   return map[action] ?? action
 }

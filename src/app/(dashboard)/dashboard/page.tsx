@@ -1,18 +1,26 @@
 import Link from "next/link"
 import { getDashboardStats, getRecentContracts, getContractStatusBreakdown, getUpcomingRenewals } from "@/actions/dashboard"
+import { getLatestAiInsights } from "@/actions/ai-review"
+import { getObligationStats } from "@/actions/obligations"
+import { listNotifications } from "@/actions/notifications"
 import { DashboardStats } from "@/components/dashboard/stats-cards"
 import { DashboardRecentContracts } from "@/components/dashboard/recent-contracts"
 import { DashboardStatusChart } from "@/components/dashboard/contract-status-chart"
 import { DashboardRenewals } from "@/components/dashboard/upcoming-reminders"
+import { DashboardAiInsights } from "@/components/dashboard/ai-insights-card"
+import { DashboardObligationWidget, DashboardNotificationWidget } from "@/components/dashboard/obligation-notification-widgets"
 import { Button } from "@/components/ui/button"
 import { Plus, ArrowLeft } from "lucide-react"
 
 export default async function DashboardPage() {
-  const [stats, recentContracts, statusBreakdown, renewals] = await Promise.all([
+  const [stats, recentContracts, statusBreakdown, renewals, aiInsights, obligationStats, recentNotifications] = await Promise.all([
     getDashboardStats(),
     getRecentContracts(),
     getContractStatusBreakdown(),
     getUpcomingRenewals(),
+    getLatestAiInsights(),
+    getObligationStats(),
+    listNotifications("UNREAD"),
   ])
 
   return (
@@ -64,7 +72,25 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <DashboardRenewals contracts={renewals} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <DashboardObligationWidget stats={obligationStats} />
+        <DashboardNotificationWidget
+          notifications={recentNotifications.slice(0, 5).map((n) => ({
+            id: n.id,
+            title: n.title,
+            severity: n.severity,
+            type: n.type,
+            contractTitle: n.contract?.title ?? null,
+            contractId: n.contract?.id ?? null,
+            createdAt: n.createdAt,
+          }))}
+        />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <DashboardRenewals contracts={renewals} />
+        <DashboardAiInsights insights={aiInsights} />
+      </div>
     </div>
   )
 }

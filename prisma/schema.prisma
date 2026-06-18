@@ -24,6 +24,8 @@ model Organization {
   industryPacks   IndustryPack[]
   crmIntegrations CrmIntegration[]
   auditLogs       AuditLog[]
+  departments     Department[]
+  notifications   Notification[]
 
   @@map("organizations")
 }
@@ -33,18 +35,27 @@ model User {
   clerkUserId    String       @unique
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
+  departmentId   String?
+  department     Department?  @relation("UserDepartment", fields: [departmentId], references: [id])
   fullName       String
   email          String
+  phone          String?
+  title          String?
   role           UserRole     @default(VIEWER)
+  isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
 
-  ownedContracts Contract[]           @relation("ContractOwner")
-  versions       ContractVersion[]
-  approvalsSent  ApprovalRequest[]    @relation("ApprovalRequester")
-  approvalsToMe  ApprovalRequest[]    @relation("ApprovalApprover")
-  obligations    ContractObligation[]
-  comments       Comment[]
-  attachments    Attachment[]
+  ownedContracts     Contract[]           @relation("ContractOwner")
+  versions           ContractVersion[]
+  approvalsSent      ApprovalRequest[]    @relation("ApprovalRequester")
+  approvalsToMe      ApprovalRequest[]    @relation("ApprovalApprover")
+  obligations        ContractObligation[]
+  comments           Comment[]
+  attachments        Attachment[]
+  managedDepartments Department[]         @relation("DepartmentManager")
+  notifications      Notification[]
+
+  @@index([departmentId])
 }
 
 enum UserRole {
@@ -53,6 +64,27 @@ enum UserRole {
   LEGAL
   SALES
   VIEWER
+}
+
+model Department {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  description    String?      @db.Text
+  managerId      String?
+  manager        User?        @relation("DepartmentManager", fields: [managerId], references: [id])
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  users         User[]               @relation("UserDepartment")
+  obligations   ContractObligation[]
+  notifications Notification[]
+
+  @@index([organizationId])
+  @@index([managerId])
+  @@map("department")
 }
 
 model Company {
@@ -201,6 +233,8 @@ model Contract {
   auditLogs         AuditLog[]
   comments          Comment[]
   attachments       Attachment[]
+  aiReviews         AiReview[]
+  notifications     Notification[]
 
   @@index([organizationId])
   @@index([companyId])
@@ -289,21 +323,33 @@ enum SignatureStatus {
 }
 
 model ContractObligation {
-  id             String           @id @default(cuid())
-  contractId     String
-  contract       Contract         @relation(fields: [contractId], references: [id])
-  title          String
-  description    String?          @db.Text
-  obligationType String
-  dueDate        DateTime?
-  ownerId        String?
-  owner          User?            @relation(fields: [ownerId], references: [id])
-  status         ObligationStatus @default(OPEN)
-  createdAt      DateTime         @default(now())
+  id               String             @id @default(cuid())
+  contractId       String
+  contract         Contract           @relation(fields: [contractId], references: [id])
+  title            String
+  description      String?            @db.Text
+  obligationType   String
+  dueDate          DateTime?
+  ownerId          String?
+  owner            User?              @relation(fields: [ownerId], references: [id])
+  departmentId     String?
+  department       Department?        @relation(fields: [departmentId], references: [id])
+  priority         ObligationPriority @default(MEDIUM)
+  triggerType      TriggerType?
+  notifyBeforeDays Int?
+  completedAt      DateTime?
+  sourceAiReviewId String?
+  source           String             @default("manual")
+  status           ObligationStatus   @default(OPEN)
+  createdAt        DateTime           @default(now())
+
+  notifications Notification[]
 
   @@index([contractId])
   @@index([ownerId])
+  @@index([departmentId])
   @@index([dueDate])
+  @@index([status])
 }
 
 enum ObligationStatus {
@@ -311,6 +357,24 @@ enum ObligationStatus {
   IN_PROGRESS
   COMPLETED
   OVERDUE
+}
+
+enum ObligationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TriggerType {
+  DUE_DATE
+  RENEWAL_DATE
+  CANCELLATION_NOTICE
+  PAYMENT_DATE
+  DELIVERABLE_DATE
+  STATUS_CHANGE
+  SIGNATURE_PENDING
+  MANUAL
 }
 
 model RenewalReminder {
@@ -329,6 +393,67 @@ model RenewalReminder {
 enum ReminderStatus {
   SCHEDULED
   SENT
+  DISMISSED
+  COMPLETED
+}
+
+model Notification {
+  id             String               @id @default(cuid())
+  organizationId String
+  organization   Organization         @relation(fields: [organizationId], references: [id])
+  contractId     String?
+  contract       Contract?            @relation(fields: [contractId], references: [id])
+  obligationId   String?
+  obligation     ContractObligation?  @relation(fields: [obligationId], references: [id])
+  userId         String?
+  user           User?                @relation(fields: [userId], references: [id])
+  departmentId   String?
+  department     Department?          @relation(fields: [departmentId], references: [id])
+  type           NotificationType
+  title          String
+  message        String               @db.Text
+  severity       NotificationSeverity @default(INFO)
+  status         NotificationStatus   @default(UNREAD)
+  actionUrl      String?
+  dueDate        DateTime?
+  createdAt      DateTime             @default(now())
+  readAt         DateTime?
+  dismissedAt    DateTime?
+
+  @@index([organizationId])
+  @@index([contractId])
+  @@index([obligationId])
+  @@index([userId])
+  @@index([departmentId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("notification")
+}
+
+enum NotificationType {
+  CONTRACT_RENEWAL
+  CANCELLATION_NOTICE
+  OBLIGATION_DUE
+  PAYMENT_DUE
+  APPROVAL_REQUIRED
+  SIGNATURE_PENDING
+  STATUS_CHANGED
+  AI_RISK_FOUND
+  MISSING_CLAUSE
+  MANUAL_TASK
+}
+
+enum NotificationSeverity {
+  INFO
+  SUCCESS
+  WARNING
+  DANGER
+  CRITICAL
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
   DISMISSED
   COMPLETED
 }
@@ -391,4 +516,23 @@ model Attachment {
   createdAt    DateTime @default(now())
 
   @@index([contractId])
+}
+
+model AiReview {
+  id             String   @id @default(cuid())
+  organizationId String
+  contractId     String
+  contract       Contract @relation(fields: [contractId], references: [id])
+  reviewType     String
+  riskScore      Int?
+  summary        String?  @db.Text
+  findings       Json?
+  missingClauses Json?
+  obligations    Json?
+  suggestions    Json?
+  createdAt      DateTime @default(now())
+
+  @@index([contractId])
+  @@index([organizationId])
+  @@map("ai_reviews")
 }

@@ -12,16 +12,19 @@ import {
   Bell,
   Users,
   Settings,
+  ListChecks,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/dashboard", label: "לוח בקרה", icon: LayoutDashboard },
   { href: "/contracts", label: "חוזים", icon: FileText },
+  { href: "/obligations", label: "התחייבויות", icon: ListChecks },
+  { href: "/departments", label: "מחלקות", icon: Building2 },
+  { href: "/notifications", label: "התראות", icon: Bell },
   { href: "/presign", label: "טרום-חתימה", icon: GitBranch },
   { href: "/templates", label: "תבניות", icon: FileStack },
   { href: "/clauses", label: "סעיפים", icon: BookOpen },
-  { href: "/industries", label: "תעשיות", icon: Building2 },
   { href: "/reminders", label: "תזכורות", icon: Bell },
   { href: "/crm", label: "CRM", icon: Users },
   { href: "/settings", label: "הגדרות", icon: Settings },
