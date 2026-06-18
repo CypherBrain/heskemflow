@@ -1,5 +1,6 @@
 import { statusLabels } from "@/lib/contract-utils"
 import type { ContractStatus } from "@prisma/client"
+import { BarChart3 } from "lucide-react"
 
 interface StatusData {
   status: ContractStatus
@@ -24,13 +25,16 @@ export function DashboardStatusChart({ data }: { data: StatusData[] }) {
   const total = data.reduce((sum, d) => sum + d.count, 0)
 
   return (
-    <div className="rounded-2xl bg-white border border-[#E2E8F0] shadow-[0_4px_20px_rgba(15,23,42,0.04)] overflow-hidden">
-      <div className="px-6 py-4 border-b border-[#E2E8F0]">
-        <h3 className="text-lg font-bold text-[#0F172A]">התפלגות סטטוסים</h3>
+    <div className="premium-card overflow-hidden">
+      <div className="flex items-center gap-2.5 px-6 py-5 border-b border-[#E2E8F0]/80">
+        <div className="flex size-8 items-center justify-center rounded-xl bg-[#DBEAFE]">
+          <BarChart3 className="size-4 text-[#2563EB]" />
+        </div>
+        <h3 className="text-base font-bold text-[#0F172A]">התפלגות סטטוסים</h3>
       </div>
-      <div className="p-6 space-y-3">
+      <div className="p-6 space-y-3.5">
         {data.length === 0 ? (
-          <p className="text-sm text-[#64748B]">אין נתונים</p>
+          <p className="text-sm text-[#94A3B8] text-center py-4">אין נתונים להצגה</p>
         ) : (
           data.map(({ status, count }) => {
             const pct = total > 0 ? Math.round((count / total) * 100) : 0
@@ -38,13 +42,13 @@ export function DashboardStatusChart({ data }: { data: StatusData[] }) {
               <div key={status} className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-[#334155]">{statusLabels[status] ?? status}</span>
-                  <span className="text-[#94A3B8] text-xs font-semibold">
+                  <span className="text-[#94A3B8] text-xs font-bold tabular-nums">
                     {count} ({pct}%)
                   </span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-[#F1F5F9]">
+                <div className="h-2.5 w-full rounded-full bg-[#F1F5F9]">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${barColors[status] ?? "bg-[#94A3B8]"}`}
+                    className={`h-full rounded-full transition-all duration-700 ease-out ${barColors[status] ?? "bg-[#94A3B8]"}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>

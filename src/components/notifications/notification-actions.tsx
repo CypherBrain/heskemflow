@@ -4,7 +4,7 @@ import { useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { markNotificationRead, dismissNotification, completeNotification, generateDueNotifications } from "@/actions/notifications"
-import { Check, X, Eye, RefreshCw, Loader2 } from "lucide-react"
+import { Check, X, Eye, RefreshCw, Loader2, ArrowLeft } from "lucide-react"
 
 export function NotificationActions({
   notificationId,
@@ -45,19 +45,20 @@ export function NotificationActions({
   return (
     <div className="flex gap-1">
       {status === "UNREAD" && (
-        <Button variant="ghost" size="icon" onClick={handleRead} disabled={isPending} className="size-7 rounded-lg">
+        <Button variant="ghost" size="icon" onClick={handleRead} disabled={isPending} className="size-8 rounded-xl hover:bg-[#DBEAFE] transition-all duration-200">
           <Eye className="size-3.5 text-[#64748B]" />
         </Button>
       )}
-      <Button variant="ghost" size="icon" onClick={handleComplete} disabled={isPending} className="size-7 rounded-lg">
+      <Button variant="ghost" size="icon" onClick={handleComplete} disabled={isPending} className="size-8 rounded-xl hover:bg-[#DCFCE7] transition-all duration-200">
         <Check className="size-3.5 text-[#16A34A]" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={handleDismiss} disabled={isPending} className="size-7 rounded-lg">
+      <Button variant="ghost" size="icon" onClick={handleDismiss} disabled={isPending} className="size-8 rounded-xl hover:bg-[#F1F5F9] transition-all duration-200">
         <X className="size-3.5 text-[#94A3B8]" />
       </Button>
       {actionUrl && (
-        <Button variant="ghost" size="sm" onClick={handleNavigate} className="text-[10px] h-7 rounded-lg text-[#2563EB]">
-          פתח
+        <Button variant="ghost" size="sm" onClick={handleNavigate} className="text-[10px] h-8 rounded-xl text-[#2563EB] hover:bg-[#DBEAFE] gap-1 font-semibold transition-all duration-200">
+          פתח חוזה
+          <ArrowLeft className="size-3" />
         </Button>
       )}
     </div>
@@ -74,7 +75,7 @@ export function GenerateNotificationsButton() {
   }
 
   return (
-    <Button onClick={handleGenerate} disabled={isPending} size="sm" variant="outline" className="rounded-xl gap-2">
+    <Button onClick={handleGenerate} disabled={isPending} size="sm" variant="outline" className="rounded-xl gap-2 border-[#E2E8F0] hover:border-[#DBEAFE] hover:bg-[#F8FAFC] font-semibold transition-all duration-200">
       {isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
       בדוק עכשיו
     </Button>

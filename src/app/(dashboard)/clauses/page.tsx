@@ -13,11 +13,11 @@ export default async function ClausesPage() {
   >[0]["clauses"]
 
   return (
-    <div className="space-y-8">
+    <div className="page-shell">
       <div>
         <h1 className="page-title">ספריית סעיפים</h1>
-        <p className="page-description mt-1">
-          סעיפים מוכנים לשילוב בחוזים — ניתן לחפש, לסנן ולערוך
+        <p className="page-description mt-2">
+          סעיפים מוכנים לשילוב בחוזים — ניתן לחפש, לסנן ולערוך.
         </p>
       </div>
 

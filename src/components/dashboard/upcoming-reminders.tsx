@@ -1,6 +1,5 @@
 import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import { CalendarClock } from "lucide-react"
+import { CalendarClock, ArrowLeft } from "lucide-react"
 
 interface SerializedRenewalContract {
   id: string
@@ -10,45 +9,56 @@ interface SerializedRenewalContract {
 }
 
 export function DashboardRenewals({ contracts }: { contracts: SerializedRenewalContract[] }) {
-  if (contracts.length === 0) {
-    return (
-      <div className="rounded-2xl bg-white border border-[#E2E8F0] p-6 shadow-[0_4px_20px_rgba(15,23,42,0.04)]">
-        <h3 className="text-lg font-bold text-[#0F172A] mb-3">חידושים קרובים</h3>
-        <p className="text-sm text-[#64748B]">אין חידושים קרובים</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="rounded-2xl bg-white border border-[#E2E8F0] shadow-[0_4px_20px_rgba(15,23,42,0.04)] overflow-hidden">
-      <div className="px-6 py-4 border-b border-[#E2E8F0]">
-        <h3 className="text-lg font-bold text-[#0F172A]">חידושים קרובים</h3>
+    <div className="premium-card overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-5 border-b border-[#E2E8F0]/80">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-[#FEE2E2]">
+            <CalendarClock className="size-4 text-[#DC2626]" />
+          </div>
+          <h3 className="text-base font-bold text-[#0F172A]">חידושים קרובים</h3>
+        </div>
+        <Link href="/contracts" className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-semibold flex items-center gap-1 transition-colors">
+          הכל
+          <ArrowLeft className="size-3" />
+        </Link>
       </div>
-      <div className="p-4 space-y-2">
-        {contracts.map((contract) => {
-          const daysUntil = contract.renewalDate
-            ? Math.ceil((new Date(contract.renewalDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-            : null
-          const isUrgent = daysUntil !== null && daysUntil <= 7
 
-          return (
-            <Link key={contract.id} href={`/contracts/${contract.id}`} className="block">
-              <div className={`flex items-start gap-3 rounded-xl border p-4 transition-all hover:shadow-sm ${isUrgent ? "border-[#FEE2E2] bg-[#FEF2F2]" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
-                <CalendarClock className={`mt-0.5 size-4 shrink-0 ${isUrgent ? "text-[#DC2626]" : "text-[#D97706]"}`} />
-                <div className="flex-1 space-y-0.5">
-                  <p className="text-sm font-semibold text-[#0F172A]">{contract.title}</p>
-                  <p className="text-xs text-[#64748B]">{contract.company?.name ?? "—"}</p>
+      {contracts.length === 0 ? (
+        <div className="px-6 py-10 text-center">
+          <CalendarClock className="size-10 text-[#E2E8F0] mx-auto mb-3" />
+          <p className="text-sm text-[#94A3B8] font-medium">אין חידושים קרובים</p>
+          <p className="text-xs text-[#CBD5E1] mt-1">כל החוזים מעודכנים</p>
+        </div>
+      ) : (
+        <div className="p-3 space-y-2">
+          {contracts.map((contract) => {
+            const daysUntil = contract.renewalDate
+              ? Math.ceil((new Date(contract.renewalDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+              : null
+            const isUrgent = daysUntil !== null && daysUntil <= 7
+
+            return (
+              <Link key={contract.id} href={`/contracts/${contract.id}`} className="block">
+                <div className={`flex items-center gap-3 rounded-xl border p-3.5 transition-all duration-200 hover:shadow-sm ${isUrgent ? "border-[#FECACA] bg-[#FEF2F2]" : "border-[#E2E8F0] hover:bg-[#F8FAFC] hover:border-[#DBEAFE]"}`}>
+                  <div className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${isUrgent ? "bg-[#FEE2E2]" : "bg-[#FEF3C7]"}`}>
+                    <CalendarClock className={`size-4 ${isUrgent ? "text-[#DC2626]" : "text-[#D97706]"}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#0F172A] truncate">{contract.title}</p>
+                    <p className="text-[11px] text-[#94A3B8]">{contract.company?.name ?? "—"}</p>
+                  </div>
+                  {daysUntil !== null && (
+                    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-lg ring-1 ${isUrgent ? "bg-[#FEE2E2] text-[#DC2626] ring-[#FECACA]" : "bg-[#FEF3C7] text-[#D97706] ring-[#FDE68A]"}`}>
+                      {daysUntil <= 0 ? "עבר" : `בעוד ${daysUntil} ימים`}
+                    </span>
+                  )}
                 </div>
-                {daysUntil !== null && (
-                  <Badge className={`text-[10px] font-bold rounded-lg ${isUrgent ? "bg-[#FEE2E2] text-[#DC2626]" : "bg-[#FEF3C7] text-[#D97706]"}`}>
-                    {daysUntil <= 0 ? "עבר" : `בעוד ${daysUntil} ימים`}
-                  </Badge>
-                )}
-              </div>
-            </Link>
-          )
-        })}
-      </div>
+              </Link>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

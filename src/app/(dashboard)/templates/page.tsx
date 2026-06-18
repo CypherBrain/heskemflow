@@ -13,11 +13,11 @@ export default async function TemplatesPage() {
   >[0]["templates"]
 
   return (
-    <div className="space-y-8">
+    <div className="page-shell">
       <div>
         <h1 className="page-title">תבניות חוזים</h1>
-        <p className="page-description mt-1">
-          ספריית תבניות ליצירה מהירה של חוזים מותאמים אישית
+        <p className="page-description mt-2">
+          ספריית תבניות ליצירה מהירה של חוזים מותאמים אישית.
         </p>
       </div>
 

@@ -50,11 +50,11 @@ export default async function RemindersPage() {
   ]
 
   return (
-    <div className="space-y-8">
+    <div className="page-shell">
       <div>
         <h1 className="page-title">תזכורות ומועדים</h1>
-        <p className="page-description mt-1">
-          מעקב אחר חידושים, תפוגות והתחייבויות — כדי שלא תפספס שום דדליין
+        <p className="page-description mt-2">
+          מעקב אחר חידושים, תפוגות והתחייבויות — כדי שלא תפספס שום דדליין.
         </p>
       </div>
 
@@ -62,14 +62,16 @@ export default async function RemindersPage() {
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="flex items-center gap-4 rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)]"
+            className="metric-card p-5"
           >
-            <div className={`flex size-11 items-center justify-center rounded-xl ${card.iconBg}`}>
-              <card.icon className={`size-5 ${card.iconColor}`} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[#0F172A]">{card.value}</p>
-              <p className="text-xs font-medium text-[#64748B]">{card.label}</p>
+            <div className="flex items-center gap-4">
+              <div className={`flex size-12 items-center justify-center rounded-2xl ${card.iconBg}`}>
+                <card.icon className={`size-5 ${card.iconColor}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-extrabold text-[#0F172A] tracking-tight">{card.value}</p>
+                <p className="text-xs font-medium text-[#94A3B8]">{card.label}</p>
+              </div>
             </div>
           </div>
         ))}
@@ -92,7 +94,7 @@ export default async function RemindersPage() {
               return (
                 <div
                   key={contract.id}
-                  className="flex items-center gap-4 rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)] transition-shadow hover:shadow-[0_8px_30px_rgba(15,23,42,0.08)]"
+                  className="premium-card flex items-center gap-4 p-5 hover:shadow-[0_24px_50px_rgba(15,23,42,0.08)] transition-all duration-200"
                 >
                   <div className={`flex size-10 items-center justify-center rounded-xl ${
                     isPast ? "bg-red-50" : isUrgent ? "bg-amber-50" : "bg-emerald-50"
@@ -142,7 +144,7 @@ export default async function RemindersPage() {
             {reminders.map((reminder) => (
               <div
                 key={reminder.id}
-                className="flex items-center gap-4 rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)]"
+                className="premium-card flex items-center gap-4 p-5"
               >
                 <div className={`flex size-10 items-center justify-center rounded-xl ${
                   reminder.status === "SCHEDULED" ? "bg-[#DBEAFE]" : "bg-emerald-50"
@@ -176,12 +178,12 @@ export default async function RemindersPage() {
       )}
 
       {reminders.length === 0 && contractsWithRenewal.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#E2E8F0] bg-white py-16 shadow-[0_4px_20px_rgba(15,23,42,0.04)]">
-          <div className="flex size-16 items-center justify-center rounded-2xl bg-[#DBEAFE] mb-4">
-            <Bell className="size-7 text-[#2563EB]" />
+        <div className="flex flex-col items-center justify-center py-20 rounded-3xl border-2 border-dashed border-[#E2E8F0] bg-gradient-to-b from-white to-[#FAFBFE]">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-[#F1F5F9] mb-4">
+            <Bell className="size-7 text-[#94A3B8]" />
           </div>
-          <p className="text-base font-bold text-[#0F172A] mb-1">אין תזכורות עדיין</p>
-          <p className="text-sm text-[#64748B]">תזכורות יופיעו כאן כשתוסיף מועדי חידוש לחוזים</p>
+          <p className="text-sm font-bold text-[#334155]">אין תזכורות עדיין</p>
+          <p className="text-[13px] text-[#94A3B8] mt-1.5 max-w-xs text-center">תזכורות יופיעו כאן כשתוסיף מועדי חידוש לחוזים</p>
         </div>
       )}
     </div>

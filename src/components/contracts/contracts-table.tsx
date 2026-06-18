@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Search, FileText } from "lucide-react"
+import { Search, FileText, ArrowLeft } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -12,8 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { statusLabels, statusColors, formatCurrency } from "@/lib/contract-utils"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { formatCurrency } from "@/lib/contract-utils"
 import type { ContractStatus } from "@prisma/client"
 
 interface SerializedContract {
@@ -33,12 +33,14 @@ interface SerializedContract {
 }
 
 const statusFilters: { value: string; label: string }[] = [
-  { value: "all", label: "הכל" },
+  { value: "all", label: "הכול" },
   { value: "ACTIVE", label: "פעיל" },
   { value: "DRAFT", label: "טיוטה" },
   { value: "SENT_FOR_SIGNATURE", label: "ממתין לחתימה" },
   { value: "INTERNAL_REVIEW", label: "בדיקה פנימית" },
   { value: "LEGAL_REVIEW", label: "בדיקה משפטית" },
+  { value: "CLIENT_REVIEW", label: "אצל הלקוח" },
+  { value: "CHANGES_REQUIRED", label: "שינויים נדרשים" },
   { value: "APPROVED", label: "מאושר" },
   { value: "SIGNED", label: "חתום" },
 ]
@@ -61,15 +63,16 @@ export function ContractsTable({ contracts }: { contracts: SerializedContract[] 
   })
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Search & Filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="relative flex-1 sm:max-w-sm">
-          <Search className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-[#94A3B8]" />
+        <div className="relative flex-1 sm:max-w-md">
+          <Search className="absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-[#94A3B8]" />
           <Input
-            placeholder="חיפוש חוזה..."
+            placeholder="חיפוש לפי שם חוזה או חברה..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="ps-10 h-10 rounded-xl bg-white border-[#E2E8F0] placeholder:text-[#94A3B8]"
+            className="ps-10 h-11 rounded-xl bg-white border-[#E2E8F0] placeholder:text-[#94A3B8] focus:border-[#2563EB] transition-colors"
           />
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -77,10 +80,10 @@ export function ContractsTable({ contracts }: { contracts: SerializedContract[] 
             <button
               key={sf.value}
               onClick={() => setFilter(sf.value)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 ${
                 filter === sf.value
-                  ? "bg-[#2563EB] text-white shadow-sm"
-                  : "bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F5F9] hover:text-[#334155]"
+                  ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/15"
+                  : "bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F8FAFC] hover:text-[#334155] hover:border-[#DBEAFE]"
               }`}
             >
               {sf.label}
@@ -89,61 +92,78 @@ export function ContractsTable({ contracts }: { contracts: SerializedContract[] 
         </div>
       </div>
 
+      {/* Results */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#E2E8F0] bg-white py-16">
-          <FileText className="size-10 text-[#94A3B8] mb-3" />
-          <p className="text-[#64748B] font-medium">
-            {contracts.length === 0 ? "אין חוזים עדיין" : "לא נמצאו חוזים"}
+        <div className="flex flex-col items-center justify-center py-20 rounded-3xl border-2 border-dashed border-[#E2E8F0] bg-gradient-to-b from-white to-[#FAFBFE]">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-[#F1F5F9] mb-4">
+            <FileText className="size-7 text-[#94A3B8]" />
+          </div>
+          <p className="text-sm font-bold text-[#334155]">
+            {contracts.length === 0 ? "עדיין אין חוזים להצגה" : "לא נמצאו חוזים מתאימים"}
           </p>
+          <p className="text-[13px] text-[#94A3B8] mt-1.5">
+            {contracts.length === 0 ? "צור חוזה ראשון כדי להתחיל לנהל את התהליך" : "נסה לשנות את מסנני החיפוש"}
+          </p>
+          {contracts.length === 0 && (
+            <Link href="/contracts/new" className="mt-5">
+              <button className="rounded-xl px-4 py-2 text-sm bg-[#2563EB] text-white font-semibold shadow-md shadow-blue-500/15 hover:bg-[#1D4ED8] transition-colors">
+                צור חוזה חדש
+              </button>
+            </Link>
+          )}
         </div>
       ) : (
-        <div className="rounded-2xl bg-white border border-[#E2E8F0] shadow-[0_4px_20px_rgba(15,23,42,0.04)] overflow-hidden">
+        <div className="premium-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-[#F8FAFC] hover:bg-[#F8FAFC]">
-                <TableHead className="font-semibold text-[#334155]">כותרת</TableHead>
-                <TableHead className="font-semibold text-[#334155]">חברה</TableHead>
-                <TableHead className="font-semibold text-[#334155]">סוג</TableHead>
-                <TableHead className="font-semibold text-[#334155]">סטטוס</TableHead>
-                <TableHead className="font-semibold text-[#334155]">שווי</TableHead>
-                <TableHead className="font-semibold text-[#334155]">עדכון אחרון</TableHead>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider text-[#64748B]">כותרת</TableHead>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider text-[#64748B]">חברה</TableHead>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider text-[#64748B]">סוג</TableHead>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider text-[#64748B]">סטטוס</TableHead>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider text-[#64748B]">שווי</TableHead>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider text-[#64748B]">עדכון</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((contract) => (
-                <TableRow key={contract.id} className="hover:bg-[#F8FAFC] transition-colors">
+                <TableRow key={contract.id} className="hover:bg-[#F8FAFC]/80 transition-all duration-150 group">
                   <TableCell>
-                    <Link href={`/contracts/${contract.id}`} className="font-semibold text-[#0F172A] hover:text-[#2563EB] transition-colors">
+                    <Link href={`/contracts/${contract.id}`} className="font-semibold text-[#0F172A] hover:text-[#2563EB] transition-colors text-sm">
                       {contract.title}
                     </Link>
                   </TableCell>
                   <TableCell>
                     {contract.company ? (
-                      <div className="flex items-center gap-2">
-                        <div className="flex size-7 items-center justify-center rounded-lg bg-[#F1F5F9] text-[10px] font-bold text-[#64748B]">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#F1F5F9] to-[#E2E8F0] text-[10px] font-bold text-[#64748B]">
                           {getInitials(contract.company.name)}
                         </div>
                         <span className="text-sm text-[#334155]">{contract.company.name}</span>
                       </div>
                     ) : (
-                      <span className="text-[#94A3B8]">—</span>
+                      <span className="text-[#CBD5E1]">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-[#64748B]">
-                    {contract.contractType}
+                  <TableCell>
+                    <span className="text-sm text-[#64748B]">{contract.contractType}</span>
                   </TableCell>
                   <TableCell>
-                    <Badge className={`text-[10px] font-bold rounded-lg px-2 py-0.5 ${statusColors[contract.status]}`}>
-                      {statusLabels[contract.status] ?? contract.status}
-                    </Badge>
+                    <StatusBadge status={contract.status} />
                   </TableCell>
-                  <TableCell className="text-sm font-semibold text-[#0F172A]">
+                  <TableCell className="text-sm font-semibold text-[#0F172A] tabular-nums">
                     {formatCurrency(contract.amount)}
                   </TableCell>
                   <TableCell className="text-sm text-[#94A3B8]">
                     {contract.updatedAt
                       ? new Date(contract.updatedAt).toLocaleDateString("he-IL")
                       : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Link href={`/contracts/${contract.id}`} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ArrowLeft className="size-4 text-[#94A3B8] hover:text-[#2563EB]" />
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}

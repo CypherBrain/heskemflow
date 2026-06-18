@@ -1,4 +1,4 @@
-import { FileText, Clock, CalendarClock, AlertTriangle, BarChart3 } from "lucide-react"
+import { FileText, Clock, CalendarClock, AlertTriangle, BarChart3, AlertCircle } from "lucide-react"
 
 interface DashboardStatsProps {
   stats: {
@@ -8,10 +8,18 @@ interface DashboardStatsProps {
     pendingReview: number
     totalContracts: number
   }
+  overdueObligations?: number
 }
 
-export function DashboardStats({ stats }: DashboardStatsProps) {
+export function DashboardStats({ stats, overdueObligations = 0 }: DashboardStatsProps) {
   const items = [
+    {
+      label: "סה״כ חוזים",
+      value: stats.totalContracts,
+      icon: BarChart3,
+      iconBg: "bg-[#EDE9FE]",
+      iconColor: "text-[#7C3AED]",
+    },
     {
       label: "חוזים פעילים",
       value: stats.activeContracts,
@@ -27,6 +35,13 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
       iconColor: "text-[#D97706]",
     },
     {
+      label: "דורשים בדיקה",
+      value: stats.pendingReview,
+      icon: AlertTriangle,
+      iconBg: "bg-[#FEF3C7]",
+      iconColor: "text-[#D97706]",
+    },
+    {
       label: "חידושים ב-30 יום",
       value: stats.renewalsNext30Days,
       icon: CalendarClock,
@@ -34,37 +49,30 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
       iconColor: "text-[#DC2626]",
     },
     {
-      label: "ממתינים לבדיקה",
-      value: stats.pendingReview,
-      icon: AlertTriangle,
-      iconBg: "bg-[#FEF3C7]",
-      iconColor: "text-[#D97706]",
-    },
-    {
-      label: "סה״כ חוזים",
-      value: stats.totalContracts,
-      icon: BarChart3,
-      iconBg: "bg-[#DCFCE7]",
-      iconColor: "text-[#16A34A]",
+      label: "התחייבויות באיחור",
+      value: overdueObligations,
+      icon: AlertCircle,
+      iconBg: "bg-[#FEE2E2]",
+      iconColor: "text-[#DC2626]",
     },
   ]
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {items.map((item) => {
         const Icon = item.icon
         return (
           <div
             key={item.label}
-            className="group relative overflow-hidden rounded-2xl bg-white border border-[#E2E8F0] p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_30px_rgba(15,23,42,0.08)] transition-all duration-200"
+            className="metric-card p-4"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[#64748B] font-medium">{item.label}</p>
-                <p className="mt-1.5 text-3xl font-extrabold text-[#0F172A] tracking-tight">{item.value}</p>
-              </div>
-              <div className={`rounded-xl p-3 ${item.iconBg}`}>
+            <div className="flex items-center gap-3">
+              <div className={`flex size-11 items-center justify-center rounded-2xl ${item.iconBg}`}>
                 <Icon className={`size-5 ${item.iconColor}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-2xl font-extrabold text-[#0F172A] tracking-tight">{item.value}</p>
+                <p className="text-[11px] text-[#94A3B8] font-medium">{item.label}</p>
               </div>
             </div>
           </div>

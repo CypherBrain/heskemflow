@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { AlertCircle, Clock, Bell, ListChecks, ChevronLeft } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { AlertCircle, Clock, Bell, ListChecks, ArrowLeft } from "lucide-react"
 
 interface ObligationWidgetData {
   overdue: number
@@ -20,80 +19,93 @@ interface NotificationWidgetItem {
   createdAt: string
 }
 
+const severityConfig: Record<string, { dot: string; bg: string }> = {
+  INFO: { dot: "bg-[#2563EB]", bg: "bg-[#DBEAFE]" },
+  SUCCESS: { dot: "bg-[#16A34A]", bg: "bg-[#DCFCE7]" },
+  WARNING: { dot: "bg-[#D97706]", bg: "bg-[#FEF3C7]" },
+  DANGER: { dot: "bg-[#DC2626]", bg: "bg-[#FEE2E2]" },
+  CRITICAL: { dot: "bg-[#DC2626]", bg: "bg-[#FEE2E2]" },
+}
+
 export function DashboardObligationWidget({ stats }: { stats: ObligationWidgetData }) {
   return (
-    <div className="rounded-2xl bg-white border border-[#E2E8F0] p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)]">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <ListChecks className="size-4 text-[#2563EB]" />
-          <h3 className="text-sm font-bold text-[#0F172A]">התחייבויות</h3>
+    <div className="premium-card p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-[#DBEAFE]">
+            <ListChecks className="size-4 text-[#2563EB]" />
+          </div>
+          <h3 className="text-base font-bold text-[#0F172A]">התחייבויות</h3>
         </div>
-        <Link href="/obligations" className="text-xs text-[#2563EB] hover:underline font-medium flex items-center gap-1">
+        <Link href="/obligations" className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-semibold flex items-center gap-1 transition-colors">
           הכל
-          <ChevronLeft className="size-3" />
+          <ArrowLeft className="size-3" />
         </Link>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl bg-[#FEE2E2] p-3 text-center">
-          <AlertCircle className="size-4 text-[#DC2626] mx-auto mb-1" />
-          <p className="text-xl font-extrabold text-[#DC2626]">{stats.overdue}</p>
-          <p className="text-[10px] text-[#DC2626]/70 font-medium">באיחור</p>
+        <div className="rounded-2xl bg-gradient-to-b from-[#FEE2E2] to-[#FEF2F2] p-4 text-center ring-1 ring-[#FECACA]">
+          <AlertCircle className="size-5 text-[#DC2626] mx-auto mb-1.5" />
+          <p className="text-2xl font-extrabold text-[#DC2626]">{stats.overdue}</p>
+          <p className="text-[10px] text-[#DC2626]/70 font-bold">באיחור</p>
         </div>
-        <div className="rounded-xl bg-[#FEF3C7] p-3 text-center">
-          <Clock className="size-4 text-[#D97706] mx-auto mb-1" />
-          <p className="text-xl font-extrabold text-[#D97706]">{stats.dueThisWeek}</p>
-          <p className="text-[10px] text-[#D97706]/70 font-medium">השבוע</p>
+        <div className="rounded-2xl bg-gradient-to-b from-[#FEF3C7] to-[#FFFBEB] p-4 text-center ring-1 ring-[#FDE68A]">
+          <Clock className="size-5 text-[#D97706] mx-auto mb-1.5" />
+          <p className="text-2xl font-extrabold text-[#D97706]">{stats.dueThisWeek}</p>
+          <p className="text-[10px] text-[#D97706]/70 font-bold">השבוע</p>
         </div>
-        <div className="rounded-xl bg-[#DBEAFE] p-3 text-center">
-          <ListChecks className="size-4 text-[#2563EB] mx-auto mb-1" />
-          <p className="text-xl font-extrabold text-[#2563EB]">{stats.open}</p>
-          <p className="text-[10px] text-[#2563EB]/70 font-medium">פתוחות</p>
+        <div className="rounded-2xl bg-gradient-to-b from-[#DBEAFE] to-[#EFF6FF] p-4 text-center ring-1 ring-[#BFDBFE]">
+          <ListChecks className="size-5 text-[#2563EB] mx-auto mb-1.5" />
+          <p className="text-2xl font-extrabold text-[#2563EB]">{stats.open}</p>
+          <p className="text-[10px] text-[#2563EB]/70 font-bold">פתוחות</p>
         </div>
       </div>
     </div>
   )
 }
 
-const severityColors: Record<string, string> = {
-  INFO: "bg-[#DBEAFE] text-[#2563EB]",
-  SUCCESS: "bg-[#DCFCE7] text-[#16A34A]",
-  WARNING: "bg-[#FEF3C7] text-[#D97706]",
-  DANGER: "bg-[#FEE2E2] text-[#DC2626]",
-  CRITICAL: "bg-[#DC2626] text-white",
-}
-
 export function DashboardNotificationWidget({ notifications }: { notifications: NotificationWidgetItem[] }) {
   return (
-    <div className="rounded-2xl bg-white border border-[#E2E8F0] p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)]">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Bell className="size-4 text-[#D97706]" />
-          <h3 className="text-sm font-bold text-[#0F172A]">התראות אחרונות</h3>
+    <div className="premium-card overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-5 border-b border-[#E2E8F0]/80">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-[#FEF3C7]">
+            <Bell className="size-4 text-[#D97706]" />
+          </div>
+          <h3 className="text-base font-bold text-[#0F172A]">התראות אחרונות</h3>
         </div>
-        <Link href="/notifications" className="text-xs text-[#2563EB] hover:underline font-medium flex items-center gap-1">
+        <Link href="/notifications" className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-semibold flex items-center gap-1 transition-colors">
           הכל
-          <ChevronLeft className="size-3" />
+          <ArrowLeft className="size-3" />
         </Link>
       </div>
       {notifications.length === 0 ? (
-        <p className="text-sm text-[#94A3B8] text-center py-4">אין התראות</p>
+        <div className="px-6 py-10 text-center">
+          <Bell className="size-10 text-[#E2E8F0] mx-auto mb-3" />
+          <p className="text-sm text-[#94A3B8] font-medium">אין התראות פתוחות כרגע — הכול בשליטה</p>
+        </div>
       ) : (
-        <div className="space-y-2">
-          {notifications.map((n) => (
-            <div key={n.id} className="flex items-start gap-2 rounded-lg p-2 hover:bg-[#F8FAFC] transition-colors">
-              <Badge className={`text-[9px] shrink-0 rounded-md font-bold mt-0.5 ${severityColors[n.severity] ?? severityColors.INFO}`}>
-                {n.severity === "CRITICAL" ? "!" : n.severity === "DANGER" ? "!!" : "i"}
-              </Badge>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-[#0F172A] truncate">{n.title}</p>
-                {n.contractTitle && n.contractId && (
-                  <Link href={`/contracts/${n.contractId}`} className="text-[10px] text-[#2563EB] hover:underline">
-                    {n.contractTitle}
-                  </Link>
-                )}
-              </div>
-            </div>
-          ))}
+        <div className="p-3 space-y-1">
+          {notifications.map((n) => {
+            const config = severityConfig[n.severity] ?? severityConfig.INFO
+            return (
+              <Link
+                key={n.id}
+                href={n.contractId ? `/contracts/${n.contractId}` : "/notifications"}
+                className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#F8FAFC] transition-all duration-200 group"
+              >
+                <div className="mt-1.5 shrink-0">
+                  <span className={`block size-2.5 rounded-full ${config.dot} ring-2 ring-white`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#0F172A] truncate group-hover:text-[#2563EB] transition-colors">{n.title}</p>
+                  {n.contractTitle && (
+                    <p className="text-[11px] text-[#94A3B8] truncate mt-0.5">{n.contractTitle}</p>
+                  )}
+                </div>
+                <ArrowLeft className="size-3.5 text-[#CBD5E1] group-hover:text-[#2563EB] transition-colors shrink-0 mt-1" />
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>

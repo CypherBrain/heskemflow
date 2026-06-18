@@ -162,16 +162,16 @@ export default function NewContractPage() {
   const selectClass = "w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent transition-shadow"
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       <div>
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[#0F172A]">יצירת חוזה חדש</h1>
-        <p className="text-sm text-[#94A3B8] mt-1">מלא את הפרטים ליצירת חוזה חדש</p>
+        <h1 className="page-title">יצירת חוזה חדש</h1>
+        <p className="page-description mt-2">מלא את הפרטים ליצירת חוזה חדש במערכת.</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Vertical Stepper – left side */}
+        {/* Vertical Stepper */}
         <div className="hidden md:block w-56 shrink-0">
-          <div className="rounded-2xl bg-white border border-[#E2E8F0] p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)] sticky top-24">
+          <div className="premium-card p-5 sticky top-24">
             <nav className="space-y-1">
               {steps.map((s, idx) => {
                 const isCompleted = step > s.id
@@ -231,14 +231,14 @@ export default function NewContractPage() {
 
         {/* Form content */}
         <div className="flex-1 min-w-0">
-          <div className="rounded-2xl bg-white border border-[#E2E8F0] shadow-[0_4px_20px_rgba(15,23,42,0.04)] overflow-hidden">
-            <div className="border-b border-[#E2E8F0] px-6 py-4">
+          <div className="premium-card overflow-hidden">
+            <div className="border-b border-[#E2E8F0]/80 px-6 py-5">
               <h2 className="text-base font-bold text-[#0F172A]">
                 שלב {step} מתוך {steps.length}: {steps[step - 1].title}
               </h2>
-              <div className="mt-3 h-1.5 rounded-full bg-[#F1F5F9] overflow-hidden">
+              <div className="mt-3 h-2 rounded-full bg-[#F1F5F9] overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-[#2563EB] transition-all duration-500 ease-out"
+                  className="h-full rounded-full bg-gradient-to-l from-[#2563EB] to-[#7C3AED] transition-all duration-500 ease-out"
                   style={{ width: `${(step / steps.length) * 100}%` }}
                 />
               </div>

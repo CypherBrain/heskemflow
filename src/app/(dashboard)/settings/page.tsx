@@ -15,15 +15,15 @@ import { Building2, Bell, Plug, Crown, FileSignature, BarChart3, HardDrive, Spar
 
 export default function SettingsPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto max-w-3xl page-shell">
       <div>
         <h1 className="page-title">הגדרות</h1>
-        <p className="page-description mt-1">ניהול הגדרות הארגון, התראות ואינטגרציות</p>
+        <p className="page-description mt-2">ניהול הגדרות הארגון, התראות ואינטגרציות.</p>
       </div>
 
-      <section className="rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_4px_20px_rgba(15,23,42,0.04)]">
-        <div className="flex items-center gap-3 border-b border-[#E2E8F0] px-6 py-4">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-[#DBEAFE]">
+      <section className="premium-card overflow-hidden">
+        <div className="flex items-center gap-3 border-b border-[#E2E8F0]/80 px-6 py-5">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-[#DBEAFE]">
             <Building2 className="size-4 text-[#2563EB]" />
           </div>
           <h2 className="text-base font-bold text-[#0F172A]">פרטי ארגון</h2>
@@ -66,16 +66,16 @@ export default function SettingsPage() {
               </Select>
             </div>
           </div>
-          <Button className="rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] font-semibold shadow-sm">
+          <Button className="rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] font-semibold shadow-md shadow-blue-500/15 transition-all duration-200">
             שמור שינויים
           </Button>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_4px_20px_rgba(15,23,42,0.04)]">
-        <div className="flex items-center gap-3 border-b border-[#E2E8F0] px-6 py-4">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-amber-50">
-            <Bell className="size-4 text-amber-600" />
+      <section className="premium-card overflow-hidden">
+        <div className="flex items-center gap-3 border-b border-[#E2E8F0]/80 px-6 py-5">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-[#FEF3C7]">
+            <Bell className="size-4 text-[#D97706]" />
           </div>
           <h2 className="text-base font-bold text-[#0F172A]">התראות</h2>
         </div>
@@ -103,9 +103,9 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_4px_20px_rgba(15,23,42,0.04)]">
-        <div className="flex items-center gap-3 border-b border-[#E2E8F0] px-6 py-4">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-[#EDE9FE]">
+      <section className="premium-card overflow-hidden">
+        <div className="flex items-center gap-3 border-b border-[#E2E8F0]/80 px-6 py-5">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-[#EDE9FE]">
             <Plug className="size-4 text-[#7C3AED]" />
           </div>
           <h2 className="text-base font-bold text-[#0F172A]">אינטגרציות</h2>
@@ -146,9 +146,9 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_4px_20px_rgba(15,23,42,0.04)]">
-        <div className="flex items-center gap-3 border-b border-[#E2E8F0] px-6 py-4">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#DBEAFE] to-[#EDE9FE]">
+      <section className="premium-card overflow-hidden">
+        <div className="flex items-center gap-3 border-b border-[#E2E8F0]/80 px-6 py-5">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#DBEAFE] to-[#EDE9FE]">
             <Crown className="size-4 text-[#7C3AED]" />
           </div>
           <h2 className="text-base font-bold text-[#0F172A]">תוכנית</h2>

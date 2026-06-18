@@ -5,11 +5,11 @@ export default async function PresignPage() {
   const contracts = await getPresignContracts()
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       <div>
         <h1 className="page-title">תהליך טרום-חתימה</h1>
-        <p className="page-description mt-1">
-          מעקב אחר חוזים בכל שלבי המחזור — שנה סטטוס מהתפריט בכל כרטיס
+        <p className="page-description mt-2">
+          מעקב אחר חוזים בכל שלבי המחזור — שנה סטטוס מהתפריט בכל כרטיס.
         </p>
       </div>
 

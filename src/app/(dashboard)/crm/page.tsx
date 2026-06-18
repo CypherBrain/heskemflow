@@ -67,24 +67,24 @@ const integrations: Integration[] = [
   },
 ]
 
-function StatusBadge({ status }: { status: IntegrationStatus }) {
+function IntegrationStatusBadge({ status }: { status: IntegrationStatus }) {
   if (status === "connected") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
-        <span className="size-1.5 rounded-full bg-emerald-500" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#DCFCE7] px-2.5 py-0.5 text-[11px] font-bold text-[#16A34A] ring-1 ring-[#BBF7D0]">
+        <span className="size-1.5 rounded-full bg-[#16A34A]" />
         מחובר
       </span>
     )
   }
   if (status === "coming_soon") {
     return (
-      <span className="inline-flex items-center rounded-full bg-[#EDE9FE] px-2.5 py-0.5 text-[11px] font-semibold text-[#7C3AED]">
+      <span className="inline-flex items-center rounded-full bg-[#EDE9FE] px-2.5 py-0.5 text-[11px] font-bold text-[#7C3AED] ring-1 ring-[#DDD6FE]">
         בקרוב
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-[#64748B]">
+    <span className="inline-flex items-center rounded-full bg-[#F1F5F9] px-2.5 py-0.5 text-[11px] font-bold text-[#64748B] ring-1 ring-[#E2E8F0]">
       לא מחובר
     </span>
   )
@@ -125,8 +125,8 @@ export default async function CrmPage() {
       icon: Users,
       value: contacts.length,
       label: "אנשי קשר",
-      iconBg: "bg-emerald-50",
-      iconColor: "text-emerald-600",
+      iconBg: "bg-[#DCFCE7]",
+      iconColor: "text-[#16A34A]",
     },
     {
       icon: TrendingUp,
@@ -138,11 +138,11 @@ export default async function CrmPage() {
   ]
 
   return (
-    <div className="space-y-8">
+    <div className="page-shell">
       <div>
         <h1 className="page-title">CRM — מרכז אינטגרציות</h1>
-        <p className="page-description mt-1">
-          ניהול חברות, אנשי קשר ועסקאות — וחיבור לכלי CRM חיצוניים
+        <p className="page-description mt-2">
+          ניהול חברות, אנשי קשר ועסקאות — וחיבור לכלי CRM חיצוניים.
         </p>
       </div>
 
@@ -150,14 +150,16 @@ export default async function CrmPage() {
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="flex items-center gap-4 rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)]"
+            className="metric-card p-5"
           >
-            <div className={`flex size-11 items-center justify-center rounded-xl ${card.iconBg}`}>
-              <card.icon className={`size-5 ${card.iconColor}`} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[#0F172A]">{card.value}</p>
-              <p className="text-xs font-medium text-[#64748B]">{card.label}</p>
+            <div className="flex items-center gap-4">
+              <div className={`flex size-12 items-center justify-center rounded-2xl ${card.iconBg}`}>
+                <card.icon className={`size-5 ${card.iconColor}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-extrabold text-[#0F172A] tracking-tight">{card.value}</p>
+                <p className="text-xs font-medium text-[#94A3B8]">{card.label}</p>
+              </div>
             </div>
           </div>
         ))}
@@ -168,29 +170,29 @@ export default async function CrmPage() {
       <div className="space-y-5">
         <div>
           <h2 className="text-lg font-bold text-[#0F172A]">אינטגרציות חיצוניות</h2>
-          <p className="text-sm text-[#64748B] mt-0.5">חבר את HeskemFlow לכלים שאתה כבר משתמש בהם</p>
+          <p className="text-sm text-[#64748B] mt-1">חבר את HeskemFlow לכלים שאתה כבר משתמש בהם</p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {integrations.map((integration) => (
             <div
               key={integration.name}
-              className="group flex flex-col justify-between rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)] transition-shadow hover:shadow-[0_8px_30px_rgba(15,23,42,0.08)]"
+              className="interactive-card p-6"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`flex size-10 items-center justify-center rounded-xl ${integration.color} text-white text-sm font-bold`}>
+                    <div className={`flex size-11 items-center justify-center rounded-2xl ${integration.color} text-white text-sm font-bold shadow-lg`}>
                       {integration.letter}
                     </div>
                     <span className="text-sm font-bold text-[#0F172A]">{integration.name}</span>
                   </div>
-                  <StatusBadge status={integration.status} />
+                  <IntegrationStatusBadge status={integration.status} />
                 </div>
                 <p className="text-[13px] leading-relaxed text-[#64748B]">
                   {integration.description}
                 </p>
               </div>
-              <div className="mt-4">
+              <div className="mt-5">
                 {integration.status === "coming_soon" ? (
                   <Button
                     variant="outline"
@@ -204,7 +206,7 @@ export default async function CrmPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs gap-1.5"
+                    className="w-full rounded-xl border-[#BBF7D0] text-[#16A34A] hover:bg-[#F0FDF4] text-xs gap-1.5 font-semibold"
                   >
                     <ExternalLink className="size-3.5" />
                     הגדרות
@@ -212,7 +214,7 @@ export default async function CrmPage() {
                 ) : (
                   <Button
                     size="sm"
-                    className="w-full rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold gap-1.5"
+                    className="w-full rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold gap-1.5 shadow-md shadow-blue-500/15 transition-all duration-200"
                   >
                     <ExternalLink className="size-3.5" />
                     חבר עכשיו

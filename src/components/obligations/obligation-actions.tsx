@@ -1,13 +1,13 @@
 "use client"
 
 import { useTransition } from "react"
-import { useRouter, useSearchParams, usePathname } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { completeObligation } from "@/actions/obligations"
-import { Check, Loader2, Filter } from "lucide-react"
+import { Check, Loader2, Filter, X } from "lucide-react"
 
 const selectClass =
-  "flex h-8 rounded-lg border border-[#E2E8F0] bg-white px-2 text-xs shadow-none outline-none focus:ring-1 focus:ring-[#2563EB]"
+  "flex h-9 rounded-xl border border-[#E2E8F0] bg-white px-3 text-xs shadow-none outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
 
 export function CompleteObligationButton({ obligationId }: { obligationId: string }) {
   const [isPending, startTransition] = useTransition()
@@ -24,10 +24,10 @@ export function CompleteObligationButton({ obligationId }: { obligationId: strin
       size="sm"
       onClick={handleComplete}
       disabled={isPending}
-      className="rounded-lg gap-1.5 text-xs h-8"
+      className="rounded-xl gap-1.5 text-xs h-9 border-[#E2E8F0] hover:border-[#BBF7D0] hover:bg-[#F0FDF4] transition-all duration-200"
     >
       {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5 text-[#16A34A]" />}
-      השלם
+      סמן כהושלם
     </Button>
   )
 }
@@ -61,8 +61,10 @@ export function ObligationFilters({
   const hasFilters = Object.values(currentFilters).some((v) => v)
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white border border-[#E2E8F0] p-3">
-      <Filter className="size-4 text-[#94A3B8]" />
+    <div className="flex flex-wrap items-center gap-2.5 premium-card p-4">
+      <div className="flex size-8 items-center justify-center rounded-xl bg-[#F1F5F9]">
+        <Filter className="size-4 text-[#94A3B8]" />
+      </div>
       <select
         value={currentFilters.status ?? "all"}
         onChange={(e) => updateFilter("status", e.target.value)}
@@ -106,8 +108,9 @@ export function ObligationFilters({
         ))}
       </select>
       {hasFilters && (
-        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs h-8 rounded-lg text-[#94A3B8]">
-          נקה
+        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs h-9 rounded-xl text-[#DC2626] hover:bg-[#FEE2E2] gap-1 transition-all duration-200">
+          <X className="size-3" />
+          נקה מסננים
         </Button>
       )}
     </div>
