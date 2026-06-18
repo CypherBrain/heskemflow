@@ -288,7 +288,11 @@ export async function reviewContractRisks(contractId: string) {
       riskScore: result.riskScore,
     })
 
-    // Auto-create notifications for high-severity findings
+    // Auto-create notifications for high-severity findings, assigned to legal dept
+    const legalDept = await prisma.department.findFirst({
+      where: { organizationId, name: { contains: "משפטי" } },
+      select: { id: true },
+    })
     for (const finding of result.findings) {
       if (finding.severity !== "high") continue
       const exists = await prisma.notification.count({
@@ -303,6 +307,7 @@ export async function reviewContractRisks(contractId: string) {
             message: `${finding.explanation}\n\nתיקון מוצע: ${finding.suggestedFix}`,
             severity: "DANGER",
             actionUrl: `/contracts/${contractId}`,
+            departmentId: legalDept?.id ?? null,
           },
         })
       }
@@ -368,7 +373,11 @@ export async function detectMissingClauses(contractId: string) {
 
     await createAuditLog(organizationId, contractId, "AI_REVIEW_CREATED", { reviewType: "missing_clauses" })
 
-    // Auto-create notifications for high-importance missing clauses
+    // Auto-create notifications for high-importance missing clauses, assigned to legal dept
+    const legalDeptMC = await prisma.department.findFirst({
+      where: { organizationId, name: { contains: "משפטי" } },
+      select: { id: true },
+    })
     for (const clause of result.missingClauses) {
       if (clause.importance !== "high") continue
       const exists = await prisma.notification.count({
@@ -383,6 +392,7 @@ export async function detectMissingClauses(contractId: string) {
             message: clause.reason,
             severity: "WARNING",
             actionUrl: `/contracts/${contractId}`,
+            departmentId: legalDeptMC?.id ?? null,
           },
         })
       }
@@ -635,90 +645,6 @@ export async function createEnrichedObligationsFromAi(
   revalidatePath("/notifications")
   revalidatePath("/dashboard")
   return { count: created.length }
-}
-
-// --------------- AI Risk → Notification ---------------
-
-export async function createNotificationsFromRisks(
-  contractId: string,
-  riskResult: RiskReview
-) {
-  const { organizationId } = await getCurrentUser()
-  let created = 0
-
-  for (const finding of riskResult.findings) {
-    if (finding.severity !== "high") continue
-    const exists = await prisma.notification.count({
-      where: {
-        organizationId,
-        contractId,
-        type: "AI_RISK_FOUND",
-        title: finding.title,
-        status: { in: ["UNREAD", "READ"] },
-      },
-    })
-    if (exists === 0) {
-      await prisma.notification.create({
-        data: {
-          organizationId,
-          contractId,
-          type: "AI_RISK_FOUND",
-          title: `סיכון AI: ${finding.title}`,
-          message: `${finding.explanation}\n\nתיקון מוצע: ${finding.suggestedFix}`,
-          severity: "DANGER",
-          actionUrl: `/contracts/${contractId}`,
-        },
-      })
-      created++
-    }
-  }
-
-  if (created > 0) {
-    revalidatePath("/notifications")
-    revalidatePath("/dashboard")
-  }
-  return { created }
-}
-
-export async function createNotificationsFromMissingClauses(
-  contractId: string,
-  missingResult: MissingClausesResponse
-) {
-  const { organizationId } = await getCurrentUser()
-  let created = 0
-
-  for (const clause of missingResult.missingClauses) {
-    if (clause.importance !== "high") continue
-    const exists = await prisma.notification.count({
-      where: {
-        organizationId,
-        contractId,
-        type: "MISSING_CLAUSE",
-        title: clause.clause,
-        status: { in: ["UNREAD", "READ"] },
-      },
-    })
-    if (exists === 0) {
-      await prisma.notification.create({
-        data: {
-          organizationId,
-          contractId,
-          type: "MISSING_CLAUSE",
-          title: `סעיף חסר: ${clause.clause}`,
-          message: clause.reason,
-          severity: "WARNING",
-          actionUrl: `/contracts/${contractId}`,
-        },
-      })
-      created++
-    }
-  }
-
-  if (created > 0) {
-    revalidatePath("/notifications")
-    revalidatePath("/dashboard")
-  }
-  return { created }
 }
 
 // --------------- Get AI Reviews (history) ---------------

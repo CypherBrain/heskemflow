@@ -534,5 +534,5 @@ model AiReview {
 
   @@index([contractId])
   @@index([organizationId])
-  @@map("ai_reviews")
+  @@map("aireview")
 }
